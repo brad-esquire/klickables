@@ -67,19 +67,44 @@ export default function ProductForm({ product }: ProductFormProps) {
     setUploadError('')
     setUploading(true)
 
-    const fd = new FormData()
-    fd.append('image', file)
-
     try {
-      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok) {
-        setUploadError(data.error ?? 'Upload failed')
+      let url: string
+
+      if (process.env.NEXT_PUBLIC_USE_LOCAL_UPLOAD === 'true') {
+        // Local dev: send file through the API route (no Netlify size limit)
+        const fd = new FormData()
+        fd.append('image', file)
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+        const data = await res.json()
+        if (!res.ok) { setUploadError(data.error ?? 'Upload failed'); return }
+        url = data.url
       } else {
-        setImages((imgs) => [...imgs, data.url])
+        // Production: get a presigned URL then upload directly to Supabase
+        // so the file never passes through the Netlify function body limit
+        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+        const urlRes = await fetch('/api/admin/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentType: file.type, size: file.size, filename }),
+        })
+        const urlData = await urlRes.json()
+        if (!urlRes.ok) { setUploadError(urlData.error ?? 'Upload failed'); return }
+
+        const uploadRes = await fetch(urlData.uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type },
+        })
+        if (!uploadRes.ok) { setUploadError('Storage upload failed — please try again'); return }
+
+        url = urlData.publicUrl
       }
+
+      setImages((imgs) => [...imgs, url])
     } catch {
-      setUploadError('Upload failed — please try again')
+      setUploadError('Upload failed — please check your connection and try again')
     } finally {
       setUploading(false)
     }
