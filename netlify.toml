@@ -8,3 +8,7 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--include=dev"
+  # NEXT_PUBLIC_* vars are intentionally inlined into the bundle by Next.js.
+  # STRIPE_SECRET_KEY appears only in server-side SSR chunks, not client JS.
+  # EMAIL_FROM is an email address, not a credential.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,STRIPE_SECRET_KEY,EMAIL_FROM"
