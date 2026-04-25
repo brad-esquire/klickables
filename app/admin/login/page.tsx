@@ -1,28 +1,29 @@
-'use client'
-
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { signIn } from '@/lib/auth'
+import { AuthError } from 'next-auth'
+import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const res = await signIn('credentials', { email, password, redirect: false })
-    if (res?.error) {
-      setError('Invalid email or password')
-      setLoading(false)
-    } else {
-      router.push('/admin')
+  async function handleSignIn(formData: FormData) {
+    'use server'
+    try {
+      await signIn('credentials', {
+        email: formData.get('email') as string,
+        password: formData.get('password') as string,
+        redirectTo: '/admin',
+      })
+    } catch (err) {
+      if (err instanceof AuthError) {
+        redirect('/admin/login?error=1')
+      }
+      throw err
     }
   }
 
@@ -35,13 +36,12 @@ export default function AdminLoginPage() {
           <p className="text-navy/50 text-sm mt-1">Klickables Dashboard</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={handleSignIn} className="space-y-4">
           <div>
             <label className="block text-sm font-bold text-navy mb-1">Email</label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              name="email"
               required
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple transition-colors"
             />
@@ -50,15 +50,14 @@ export default function AdminLoginPage() {
             <label className="block text-sm font-bold text-navy mb-1">Password</label>
             <input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              name="password"
               required
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple transition-colors"
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <Button type="submit" size="lg" disabled={loading} className="w-full">
-            {loading ? 'Signing in...' : 'Sign In'}
+          {error && <p className="text-red-500 text-sm">Invalid email or password</p>}
+          <Button type="submit" size="lg" className="w-full">
+            Sign In
           </Button>
         </form>
       </div>
