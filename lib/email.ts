@@ -4,7 +4,7 @@ import type { Order, OrderItem } from '@/types'
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
 }
-const FROM = process.env.EMAIL_FROM ?? 'orders@klickables.net'
+const FROM = process.env.EMAIL_FROM ?? ''
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? ''
 
 export async function sendOrderConfirmation(order: Order & { order_items: OrderItem[] }) {
