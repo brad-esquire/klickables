@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { slugify } from '@/lib/utils'
-import { Trash2, Plus, X, ImagePlus, Loader2 } from 'lucide-react'
+import { Trash2, Plus, X, ImagePlus, Loader2, Play } from 'lucide-react'
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov)(\?|$)/i.test(url)
+}
 import type { Product, ProductVariant } from '@/types'
 
 interface Variant {
@@ -175,22 +179,38 @@ export default function ProductForm({ product }: ProductFormProps) {
         </label>
       </div>
 
-      {/* Images */}
+      {/* Media */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-        <h2 className="font-black text-navy">Product Images</h2>
-        <p className="text-xs text-navy/50">The first image is shown in the shop listing. Max 5 MB per image (JPEG, PNG, WebP, GIF).</p>
+        <h2 className="font-black text-navy">Product Media</h2>
+        <p className="text-xs text-navy/50">The first item is shown in the shop listing. Add videos (MP4, WebM, MOV — up to 50 MB) to show the clicker in action. Images up to 5 MB (JPEG, PNG, WebP, GIF).</p>
 
         <div className="grid grid-cols-3 gap-3">
           {images.map((url, i) => (
-            <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-100 group">
-              <Image
-                src={url}
-                alt={`Product image ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 33vw, 200px"
-                unoptimized={url.startsWith('/uploads/')}
-              />
+            <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-100 group bg-black">
+              {isVideoUrl(url) ? (
+                <>
+                  <video
+                    src={url}
+                    className="w-full h-full object-cover"
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                  />
+                  <span className="absolute bottom-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center pointer-events-none">
+                    <Play size={10} fill="white" />
+                  </span>
+                </>
+              ) : (
+                <Image
+                  src={url}
+                  alt={`Product media ${i + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 33vw, 200px"
+                  unoptimized={url.startsWith('/uploads/')}
+                />
+              )}
               {i === 0 && (
                 <span className="absolute bottom-1 left-1 bg-purple text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   Main
@@ -218,7 +238,7 @@ export default function ProductForm({ product }: ProductFormProps) {
               ) : (
                 <>
                   <ImagePlus size={24} />
-                  <span className="text-xs font-semibold">Add Photo</span>
+                  <span className="text-xs font-semibold">Add Photo/Video</span>
                 </>
               )}
             </button>
@@ -230,7 +250,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
           onChange={handleImagePick}
           className="hidden"
         />

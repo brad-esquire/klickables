@@ -2,7 +2,12 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { Play } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov)(\?|$)/i.test(url)
+}
 import VariantSelector from './VariantSelector'
 import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
@@ -46,14 +51,27 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         <div>
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-cream mb-3">
             {product.images?.[activeImage] ? (
-              <Image
-                src={product.images[activeImage]}
-                alt={product.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-                priority
-              />
+              isVideoUrl(product.images[activeImage]) ? (
+                <video
+                  key={product.images[activeImage]}
+                  src={product.images[activeImage]}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls
+                />
+              ) : (
+                <Image
+                  src={product.images[activeImage]}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  priority
+                />
+              )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300 text-8xl">
                 🖱️
@@ -66,11 +84,20 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                 <button
                   key={i}
                   onClick={() => setActiveImage(i)}
-                  className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                  className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors bg-black ${
                     i === activeImage ? 'border-purple' : 'border-transparent'
                   }`}
                 >
-                  <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                  {isVideoUrl(img) ? (
+                    <>
+                      <video src={img} className="w-full h-full object-cover" muted playsInline />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Play size={14} fill="white" className="text-white" />
+                      </span>
+                    </>
+                  ) : (
+                    <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                  )}
                 </button>
               ))}
             </div>
