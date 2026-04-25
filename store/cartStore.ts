@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useState, useEffect } from 'react'
 import type { CartItem } from '@/types'
 
 interface CartStore {
@@ -10,8 +11,6 @@ interface CartStore {
   removeItem: (variantId: string) => void
   updateQty: (variantId: string, qty: number) => void
   clearCart: () => void
-  subtotal: number
-  itemCount: number
 }
 
 export const useCartStore = create<CartStore>()(
@@ -48,15 +47,23 @@ export const useCartStore = create<CartStore>()(
       },
 
       clearCart: () => set({ items: [] }),
-
-      get subtotal() {
-        return get().items.reduce((sum, i) => sum + i.price * i.quantity, 0)
-      },
-
-      get itemCount() {
-        return get().items.reduce((sum, i) => sum + i.quantity, 0)
-      },
     }),
     { name: 'klickables-cart' }
   )
 )
+
+// Returns true only after Zustand has finished reading from localStorage.
+// Use this instead of a plain `mounted` check to avoid the hydration race
+// where mounted becomes true before persist finishes loading stored items.
+export function useCartHydrated() {
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    if (useCartStore.persist.hasHydrated()) {
+      setHydrated(true)
+      return
+    }
+    const unsub = useCartStore.persist.onFinishHydration(() => setHydrated(true))
+    return unsub
+  }, [])
+  return hydrated
+}

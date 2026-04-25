@@ -8,7 +8,8 @@ import { useCartStore } from '@/store/cartStore'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const itemCount = useCartStore((s) => s.itemCount)
+  const items = useCartStore((s) => s.items)
+  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
 
   const links = [
     { href: '/shop', label: 'Shop' },

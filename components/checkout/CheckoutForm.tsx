@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { useCartStore } from '@/store/cartStore'
+import { useCartStore, useCartHydrated } from '@/store/cartStore'
 import Button from '@/components/ui/Button'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -50,7 +50,10 @@ function PaymentForm({ clientSecret, orderData }: { clientSecret: string; orderD
 }
 
 export default function CheckoutForm() {
-  const { items, subtotal, itemCount } = useCartStore()
+  const { items } = useCartStore()
+  const hydrated = useCartHydrated()
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const searchParams = useSearchParams()
   const discountCode = searchParams.get('discount') ?? ''
 
@@ -90,6 +93,8 @@ export default function CheckoutForm() {
       setLoading(false)
     }
   }
+
+  if (!hydrated) return null
 
   if (itemCount === 0) {
     return <p className="text-navy/60">Your cart is empty. <a href="/shop" className="text-purple underline">Go shopping!</a></p>
