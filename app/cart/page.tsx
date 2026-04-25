@@ -9,11 +9,14 @@ import { Trash2 } from 'lucide-react'
 
 export default function CartPage() {
   const { items, removeItem, updateQty, subtotal, itemCount } = useCartStore()
+  const [mounted, setMounted] = useState(false)
   const [discountCode, setDiscountCode] = useState('')
   const [discount, setDiscount] = useState<{ code: string; amount: number; label: string } | null>(null)
   const [discountError, setDiscountError] = useState('')
   const [checkingCode, setCheckingCode] = useState(false)
   const [shipping, setShipping] = useState<number | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     fetch(`/api/shipping-cost?subtotal=${subtotal}`)
@@ -42,6 +45,8 @@ export default function CartPage() {
 
   const discountedSubtotal = subtotal - (discount?.amount ?? 0)
   const total = discountedSubtotal + (shipping ?? 0)
+
+  if (!mounted) return null
 
   if (itemCount === 0) {
     return (
