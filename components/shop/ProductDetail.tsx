@@ -5,12 +5,17 @@ import Image from 'next/image'
 import { Play } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 
-function isVideoUrl(url: string) {
-  return /\.(mp4|webm|mov)(\?|$)/i.test(url)
-}
 import VariantSelector from './VariantSelector'
 import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov)(\?|$)/i.test(url)
+}
+
+function isGifUrl(url: string) {
+  return /\.gif(\?|$)/i.test(url)
+}
 
 interface ProductDetailProps {
   product: Product
@@ -70,6 +75,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
+                  unoptimized={isGifUrl(product.images[activeImage])}
                 />
               )
             ) : (
@@ -96,7 +102,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                       </span>
                     </>
                   ) : (
-                    <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                    <Image src={img} alt="" fill className="object-cover" sizes="64px" unoptimized={isGifUrl(img)} />
                   )}
                 </button>
               ))}

@@ -10,6 +10,10 @@ import { Trash2, Plus, X, ImagePlus, Loader2, Play } from 'lucide-react'
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov)(\?|$)/i.test(url)
 }
+
+function isGifUrl(url: string) {
+  return /\.gif(\?|$)/i.test(url)
+}
 import type { Product, ProductVariant } from '@/types'
 
 interface Variant {
@@ -208,7 +212,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 33vw, 200px"
-                  unoptimized={url.startsWith('/uploads/')}
+                  unoptimized={url.startsWith('/uploads/') || isGifUrl(url)}
                 />
               )}
               {i === 0 && (

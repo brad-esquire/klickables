@@ -2,6 +2,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Product } from '@/types'
 
+function isGifUrl(url: string) {
+  return /\.gif(\?|$)/i.test(url)
+}
+
 interface ProductCardProps {
   product: Product
 }
@@ -25,6 +29,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            unoptimized={isGifUrl(image)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-300 text-5xl">
