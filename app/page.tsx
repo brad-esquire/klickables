@@ -12,7 +12,7 @@ async function getFeaturedProducts(): Promise<Product[]> {
     .from('products')
     .select('*, product_variants(*)')
     .eq('active', true)
-    .order('created_at', { ascending: false })
+    .order('sort_order', { ascending: true })
     .limit(4)
   return data ?? []
 }
