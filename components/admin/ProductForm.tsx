@@ -143,8 +143,8 @@ export default function ProductForm({ product }: ProductFormProps) {
       images,
       variants: variants.map((v) => ({
         id: v.id,
-        color: v.color || null,
-        size: v.size || null,
+        color: v.color.trim() || null,
+        size: v.size.trim() || null,
         price: parseFloat(v.price),
         stock: parseInt(v.stock),
         sku: v.sku || null,
