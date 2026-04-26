@@ -25,7 +25,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="bg-cream py-20 px-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 text-center md:text-left">
+          <div className="flex-1 text-center md:text-left order-2 md:order-1">
             <p className="text-purple font-bold uppercase tracking-widest text-sm mb-3">
               3D Printed Clickers
             </p>
@@ -46,7 +46,7 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex justify-center order-1 md:order-2">
             <Image
               src="/logo.png"
               alt="Klickables"
