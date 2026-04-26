@@ -5,12 +5,14 @@ import { getShippingCost } from '@/lib/shipping'
 import type { CartItem, ShippingAddress } from '@/types'
 
 export async function POST(req: NextRequest) {
-  const { items, shippingAddress, discountCode, customerName, email } = await req.json() as {
+  const { items, shippingAddress, discountCode, customerName, email, fulfillmentType, pickupLocation } = await req.json() as {
     items: CartItem[]
     shippingAddress: ShippingAddress & { name?: string; line2?: string }
     discountCode?: string
     customerName: string
     email: string
+    fulfillmentType: 'shipping' | 'pickup'
+    pickupLocation?: string
   }
 
   if (!items?.length) {
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const shippingCost = await getShippingCost(subtotal)
+  const shippingCost = fulfillmentType === 'pickup' ? 0 : await getShippingCost(subtotal)
   const total = subtotal - discountAmount + shippingCost
 
   // Create Stripe PaymentIntent
@@ -66,7 +68,9 @@ export async function POST(req: NextRequest) {
       shippingCost: shippingCost.toString(),
       discountAmount: discountAmount.toString(),
       cartJson: JSON.stringify(items),
-      shippingAddressJson: JSON.stringify(shippingAddress),
+      shippingAddressJson: JSON.stringify(shippingAddress ?? {}),
+      fulfillmentType: fulfillmentType ?? 'shipping',
+      pickupLocation: pickupLocation ?? '',
     },
   })
 

@@ -12,6 +12,12 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
     .map((i) => `${i.product_name}${i.variant_label ? ` (${i.variant_label})` : ''} × ${i.quantity} — $${(i.unit_price * i.quantity).toFixed(2)}`)
     .join('\n')
 
+  const isPickup = order.fulfillment_type === 'pickup'
+
+  const fulfillmentSection = isPickup
+    ? `Pick up at: ${order.pickup_location}`
+    : `Shipping to:\n${order.customer_name}\n${order.shipping_address.line1}${order.shipping_address.line2 ? '\n' + order.shipping_address.line2 : ''}\n${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}`
+
   const body = `
 Hi ${order.customer_name},
 
@@ -22,15 +28,11 @@ Order #${order.id.slice(0, 8).toUpperCase()}
 ${itemsList}
 ---
 Subtotal:  $${order.subtotal?.toFixed(2)}
-Shipping:  $${order.shipping_cost?.toFixed(2)}
-${order.discount_amount ? `Discount:  -$${order.discount_amount.toFixed(2)}\n` : ''}Total:     $${order.total?.toFixed(2)}
+${!isPickup ? `Shipping:  $${order.shipping_cost?.toFixed(2)}\n` : ''}${order.discount_amount ? `Discount:  -$${order.discount_amount.toFixed(2)}\n` : ''}Total:     $${order.total?.toFixed(2)}
 
-Shipping to:
-${order.customer_name}
-${order.shipping_address.line1}${order.shipping_address.line2 ? '\n' + order.shipping_address.line2 : ''}
-${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}
+${fulfillmentSection}
 
-We'll be in touch once your order is on its way!
+${isPickup ? "We'll let you know when your order is ready for pickup!" : "We'll be in touch once your order is on its way!"}
 
 — Kirra, Lorelei & Isla
   `.trim()

@@ -1,21 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useCartStore, useCartHydrated } from '@/store/cartStore'
 import Button from '@/components/ui/Button'
+import { PICKUP_LOCATIONS } from '@/types'
+import { MapPin, Truck } from 'lucide-react'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
-function PaymentForm({ clientSecret, orderData }: { clientSecret: string; orderData: object }) {
+function PaymentForm({ clientSecret }: { clientSecret: string }) {
   const stripe = useStripe()
   const elements = useElements()
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
-  const clearCart = useCartStore((s) => s.clearCart)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -25,16 +25,12 @@ function PaymentForm({ clientSecret, orderData }: { clientSecret: string; orderD
 
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/checkout/success`,
-      },
+      confirmParams: { return_url: `${window.location.origin}/checkout/success` },
     })
 
     if (stripeError) {
       setError(stripeError.message ?? 'Payment failed. Please try again.')
       setPaying(false)
-    } else {
-      clearCart()
     }
   }
 
@@ -57,6 +53,8 @@ export default function CheckoutForm() {
   const searchParams = useSearchParams()
   const discountCode = searchParams.get('discount') ?? ''
 
+  const [fulfillmentType, setFulfillmentType] = useState<'shipping' | 'pickup'>('shipping')
+  const [pickupLocation, setPickupLocation] = useState(PICKUP_LOCATIONS[0])
   const [form, setForm] = useState({ name: '', email: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US' })
   const [step, setStep] = useState<'details' | 'payment'>('details')
   const [clientSecret, setClientSecret] = useState('')
@@ -66,10 +64,11 @@ export default function CheckoutForm() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (fulfillmentType === 'pickup') { setShipping(0); return }
     fetch(`/api/shipping-cost?subtotal=${subtotal}`)
       .then((r) => r.json())
       .then((d) => setShipping(d.cost))
-  }, [subtotal])
+  }, [subtotal, fulfillmentType])
 
   async function proceedToPayment(e: React.FormEvent) {
     e.preventDefault()
@@ -79,7 +78,15 @@ export default function CheckoutForm() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, shippingAddress: form, discountCode, customerName: form.name, email: form.email }),
+        body: JSON.stringify({
+          items,
+          discountCode,
+          customerName: form.name,
+          email: form.email,
+          fulfillmentType,
+          pickupLocation: fulfillmentType === 'pickup' ? pickupLocation : undefined,
+          shippingAddress: fulfillmentType === 'shipping' ? form : undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Could not create payment')
@@ -95,7 +102,6 @@ export default function CheckoutForm() {
   }
 
   if (!hydrated) return null
-
   if (itemCount === 0) {
     return <p className="text-navy/60">Your cart is empty. <a href="/shop" className="text-purple underline">Go shopping!</a></p>
   }
@@ -117,7 +123,12 @@ export default function CheckoutForm() {
           <div className="border-t pt-2 space-y-1">
             <div className="flex justify-between"><span className="text-navy/70">Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
             {discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>−${discount.toFixed(2)}</span></div>}
-            <div className="flex justify-between"><span className="text-navy/70">Shipping</span><span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span></div>
+            {fulfillmentType === 'shipping' && (
+              <div className="flex justify-between"><span className="text-navy/70">Shipping</span><span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span></div>
+            )}
+            {fulfillmentType === 'pickup' && (
+              <div className="flex justify-between text-purple"><span>Pickup</span><span>FREE</span></div>
+            )}
             <div className="flex justify-between font-black text-base border-t pt-1"><span>Total</span><span className="text-pink">${total.toFixed(2)}</span></div>
           </div>
         </div>
@@ -130,17 +141,70 @@ export default function CheckoutForm() {
             <h2 className="font-black text-navy text-lg mb-2">Your Details</h2>
             <Input label="Full Name" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} required />
             <Input label="Email" type="email" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} required />
-            <h2 className="font-black text-navy text-lg mt-4 mb-2">Shipping Address</h2>
-            <Input label="Address line 1" value={form.line1} onChange={(v) => setForm((f) => ({ ...f, line1: v }))} required />
-            <Input label="Address line 2 (optional)" value={form.line2} onChange={(v) => setForm((f) => ({ ...f, line2: v }))} />
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="City / Suburb" value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} required />
-              <Input label="State" value={form.state} onChange={(v) => setForm((f) => ({ ...f, state: v }))} required />
+
+            {/* Fulfillment toggle */}
+            <div>
+              <label className="block text-sm font-bold text-navy mb-2">Fulfillment</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('shipping')}
+                  className={`flex items-center gap-2 border-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                    fulfillmentType === 'shipping' ? 'border-purple text-purple bg-purple/5' : 'border-gray-200 text-navy/60 hover:border-gray-300'
+                  }`}
+                >
+                  <Truck size={16} /> Ship to me
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('pickup')}
+                  className={`flex items-center gap-2 border-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                    fulfillmentType === 'pickup' ? 'border-purple text-purple bg-purple/5' : 'border-gray-200 text-navy/60 hover:border-gray-300'
+                  }`}
+                >
+                  <MapPin size={16} /> Pick up
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="Postcode" value={form.postal_code} onChange={(v) => setForm((f) => ({ ...f, postal_code: v }))} required />
-              <Input label="Country" value={form.country} onChange={(v) => setForm((f) => ({ ...f, country: v }))} required />
-            </div>
+
+            {fulfillmentType === 'shipping' ? (
+              <>
+                <h2 className="font-black text-navy text-lg mt-4 mb-2">Shipping Address</h2>
+                <Input label="Address line 1" value={form.line1} onChange={(v) => setForm((f) => ({ ...f, line1: v }))} required />
+                <Input label="Address line 2 (optional)" value={form.line2} onChange={(v) => setForm((f) => ({ ...f, line2: v }))} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="City" value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} required />
+                  <Input label="State" value={form.state} onChange={(v) => setForm((f) => ({ ...f, state: v }))} required />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="Zip code" value={form.postal_code} onChange={(v) => setForm((f) => ({ ...f, postal_code: v }))} required />
+                  <Input label="Country" value={form.country} onChange={(v) => setForm((f) => ({ ...f, country: v }))} required />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-sm font-bold text-navy mb-2">Pickup location</label>
+                <div className="space-y-2">
+                  {PICKUP_LOCATIONS.map((loc) => (
+                    <label key={loc} className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition-colors ${
+                      pickupLocation === loc ? 'border-purple bg-purple/5' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="pickupLocation"
+                        value={loc}
+                        checked={pickupLocation === loc}
+                        onChange={() => setPickupLocation(loc)}
+                        className="accent-purple"
+                      />
+                      <span className="font-semibold text-navy text-sm">{loc}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-navy/50 mt-2">We'll contact you when your order is ready for pickup.</p>
+              </div>
+            )}
+
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button type="submit" size="lg" disabled={loading} className="w-full">
               {loading ? 'Processing...' : 'Continue to Payment'}
@@ -148,7 +212,7 @@ export default function CheckoutForm() {
           </form>
         ) : clientSecret ? (
           <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-            <PaymentForm clientSecret={clientSecret} orderData={{}} />
+            <PaymentForm clientSecret={clientSecret} />
           </Elements>
         ) : null}
       </div>

@@ -40,6 +40,14 @@ export interface ShippingAddress {
 }
 
 export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled'
+export type FulfillmentType = 'shipping' | 'pickup'
+
+export const PICKUP_LOCATIONS = [
+  'LRMS Fairmont',
+  'San Juan Capistrano',
+  '11 Galaxy Isle',
+] as const
+export type PickupLocation = typeof PICKUP_LOCATIONS[number]
 
 export interface Order {
   id: string
@@ -47,6 +55,8 @@ export interface Order {
   email: string
   customer_name: string
   shipping_address: ShippingAddress
+  fulfillment_type: FulfillmentType
+  pickup_location: string | null
   status: OrderStatus
   subtotal: number
   shipping_cost: number

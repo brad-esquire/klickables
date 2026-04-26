@@ -39,15 +39,24 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <p className="text-navy/60 text-sm">{order.email}</p>
         </div>
 
-        {/* Shipping */}
+        {/* Fulfillment */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h2 className="font-black text-navy mb-3">Shipping Address</h2>
-          <p className="text-navy/80 text-sm leading-relaxed">
-            {order.shipping_address.line1}<br />
-            {order.shipping_address.line2 && <>{order.shipping_address.line2}<br /></>}
-            {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}<br />
-            {order.shipping_address.country}
-          </p>
+          {order.fulfillment_type === 'pickup' ? (
+            <>
+              <h2 className="font-black text-navy mb-3">Pickup</h2>
+              <p className="text-navy/80 text-sm">{order.pickup_location}</p>
+            </>
+          ) : (
+            <>
+              <h2 className="font-black text-navy mb-3">Shipping Address</h2>
+              <p className="text-navy/80 text-sm leading-relaxed">
+                {order.shipping_address.line1}<br />
+                {order.shipping_address.line2 && <>{order.shipping_address.line2}<br /></>}
+                {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}<br />
+                {order.shipping_address.country}
+              </p>
+            </>
+          )}
         </div>
 
         {/* Items */}

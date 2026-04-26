@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
     email: meta.email,
     customer_name: meta.customerName,
     shipping_address: shippingAddress,
+    fulfillment_type: meta.fulfillmentType || 'shipping',
+    pickup_location: meta.pickupLocation || null,
     status: 'paid',
     subtotal: parseFloat(meta.subtotal),
     shipping_cost: parseFloat(meta.shippingCost),
