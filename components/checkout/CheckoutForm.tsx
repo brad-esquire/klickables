@@ -6,7 +6,6 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useCartStore, useCartHydrated } from '@/store/cartStore'
 import Button from '@/components/ui/Button'
-import { PICKUP_LOCATIONS } from '@/types'
 import { MapPin, Truck } from 'lucide-react'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -54,7 +53,17 @@ export default function CheckoutForm() {
   const discountCode = searchParams.get('discount') ?? ''
 
   const [fulfillmentType, setFulfillmentType] = useState<'shipping' | 'pickup'>('shipping')
-  const [pickupLocation, setPickupLocation] = useState(PICKUP_LOCATIONS[0])
+  const [pickupLocations, setPickupLocations] = useState<string[]>([])
+  const [pickupLocation, setPickupLocation] = useState('')
+
+  useEffect(() => {
+    fetch('/api/pickup-locations')
+      .then((r) => r.json())
+      .then((d) => {
+        setPickupLocations(d.locations ?? [])
+        if (d.locations?.length) setPickupLocation(d.locations[0])
+      })
+  }, [])
   const [form, setForm] = useState({ name: '', email: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US' })
   const [step, setStep] = useState<'details' | 'payment'>('details')
   const [clientSecret, setClientSecret] = useState('')
@@ -185,7 +194,7 @@ export default function CheckoutForm() {
               <div>
                 <label className="block text-sm font-bold text-navy mb-2">Pickup location</label>
                 <div className="space-y-2">
-                  {PICKUP_LOCATIONS.map((loc) => (
+                  {pickupLocations.map((loc) => (
                     <label key={loc} className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition-colors ${
                       pickupLocation === loc ? 'border-purple bg-purple/5' : 'border-gray-200 hover:border-gray-300'
                     }`}>

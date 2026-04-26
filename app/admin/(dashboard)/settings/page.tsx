@@ -13,7 +13,7 @@ export default async function AdminSettingsPage() {
   const settings = await getSettings()
 
   return (
-    <div className="max-w-md">
+    <div className="max-w-lg">
       <h1 className="text-3xl font-black text-navy mb-8">Settings</h1>
       <SettingsForm settings={settings} />
     </div>
