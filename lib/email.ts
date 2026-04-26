@@ -63,7 +63,9 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
         <!-- Logo -->
         <tr>
           <td align="center" style="padding-bottom:24px;">
-            <img src="${SITE_URL}/logo.png" width="160" alt="Klickables" style="display:block;" />
+            <div style="background-color:#ffffff;border-radius:12px;padding:16px 24px;display:inline-block;">
+              <img src="${SITE_URL}/logo.png" width="160" alt="Klickables" style="display:block;" />
+            </div>
           </td>
         </tr>
 
