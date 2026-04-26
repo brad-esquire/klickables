@@ -7,7 +7,7 @@ function getResend() {
 const FROM = process.env.EMAIL_FROM ?? ''
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? ''
 
-const SITE_URL = 'https://klickables.net'
+const SITE_URL = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? 'https://klickables.net'
 
 export async function sendOrderConfirmation(order: Order & { order_items: OrderItem[] }) {
   const isPickup = order.fulfillment_type === 'pickup'
