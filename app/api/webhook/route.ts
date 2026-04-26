@@ -98,7 +98,11 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (fullOrder) {
-    await sendOrderConfirmation(fullOrder as Parameters<typeof sendOrderConfirmation>[0])
+    try {
+      await sendOrderConfirmation(fullOrder as Parameters<typeof sendOrderConfirmation>[0])
+    } catch (emailErr) {
+      console.error('Email send failed:', emailErr)
+    }
   }
 
   return NextResponse.json({ received: true })
