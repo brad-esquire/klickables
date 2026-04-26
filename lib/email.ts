@@ -4,7 +4,7 @@ import type { Order, OrderItem } from '@/types'
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
 }
-const FROM = process.env.EMAIL_FROM ?? ''
+const FROM = `Klickables <${process.env.EMAIL_FROM ?? ''}>`
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? ''
 
 const SITE_URL = process.env.NEXTAUTH_URL ?? ''
