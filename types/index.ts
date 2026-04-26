@@ -90,3 +90,15 @@ export interface SiteSettings {
   shipping_threshold: string
   shipping_cost: string
 }
+
+export type PaymentEventType = 'payment_captured' | 'refund_issued'
+
+export interface PaymentEvent {
+  id: string
+  order_id: string
+  type: PaymentEventType
+  amount: number
+  stripe_id: string | null
+  note: string | null
+  created_at: string
+}

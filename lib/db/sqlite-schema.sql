@@ -65,3 +65,13 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS payment_events (
+  id TEXT PRIMARY KEY DEFAULT (gen_random_uuid()),
+  order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  amount REAL NOT NULL,
+  stripe_id TEXT,
+  note TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);

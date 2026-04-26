@@ -82,6 +82,15 @@ export async function POST(req: NextRequest) {
       .eq('id', item.variantId)
   }
 
+  // Record payment event
+  await db.from('payment_events').insert({
+    order_id: order.id,
+    type: 'payment_captured',
+    amount: pi.amount / 100,
+    stripe_id: pi.id,
+    note: null,
+  })
+
   // Increment discount usage
   if (meta.discountId) {
     const { data: disc } = await db.from('discount_codes').select('uses_count').eq('id', meta.discountId).single()

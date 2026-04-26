@@ -21,8 +21,12 @@ const RELATIONS: Record<string, Record<string, RelationDef>> = {
   },
   orders: {
     order_items: { table: 'order_items', fk: 'order_id', isArray: true },
+    payment_events: { table: 'payment_events', fk: 'order_id', isArray: true },
   },
   order_items: {
+    orders: { table: 'orders', fk: 'order_id', isArray: false },
+  },
+  payment_events: {
     orders: { table: 'orders', fk: 'order_id', isArray: false },
   },
 }

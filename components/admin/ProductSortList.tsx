@@ -132,7 +132,9 @@ export default function ProductSortList({ initialProducts }: { initialProducts: 
                   <GripVertical size={16} />
                 </td>
                 <td className="px-5 py-4">
-                  <p className="font-bold text-navy">{p.name}</p>
+                  <Link href={`/admin/products/${p.id}/edit`} className="font-bold text-navy hover:text-purple transition-colors">
+                    {p.name}
+                  </Link>
                   <p className="text-sm text-navy/50">/{p.slug}</p>
                 </td>
                 <td className="px-5 py-4 text-sm text-navy/70 hidden sm:table-cell">

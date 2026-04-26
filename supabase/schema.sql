@@ -66,6 +66,17 @@ CREATE TABLE discount_codes (
   expires_at timestamptz
 );
 
+-- Payment events (history of charges and refunds)
+CREATE TABLE payment_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid REFERENCES orders(id) ON DELETE CASCADE NOT NULL,
+  type text NOT NULL,
+  amount numeric(10,2) NOT NULL,
+  stripe_id text,
+  note text,
+  created_at timestamptz DEFAULT now()
+);
+
 -- Site settings (key-value store)
 CREATE TABLE settings (
   key text PRIMARY KEY,

@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
 import FulfillButton from '@/components/admin/FulfillButton'
-import type { Order, OrderItem } from '@/types'
+import RefundPanel from '@/components/admin/RefundPanel'
+import type { Order, OrderItem, PaymentEvent } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   paid: 'pink',
@@ -13,13 +14,23 @@ const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   cancelled: 'red',
 }
 
+const eventLabel: Record<string, { label: string; color: string }> = {
+  payment_captured: { label: 'Payment captured', color: 'text-green-600' },
+  refund_issued:    { label: 'Refund issued',     color: 'text-red-500' },
+}
+
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const db = createAdminClient()
-  const { data } = await db.from('orders').select('*, order_items(*)').eq('id', id).single()
+  const { data } = await db.from('orders').select('*, order_items(*), payment_events(*)').eq('id', id).single()
   if (!data) notFound()
 
-  const order = data as Order & { order_items: OrderItem[] }
+  const order = data as Order & { order_items: OrderItem[]; payment_events: PaymentEvent[] }
+  const events: PaymentEvent[] = (order.payment_events ?? []).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+  const totalRefunded = events.filter((e) => e.type === 'refund_issued').reduce((s, e) => s + e.amount, 0)
+  const canRefund = (order.status === 'paid' || order.status === 'fulfilled') && !!order.stripe_payment_intent_id
 
   return (
     <div className="max-w-2xl">
@@ -82,14 +93,55 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        {order.status === 'paid' && (
-          <FulfillButton orderId={order.id} />
+        {/* Payment history */}
+        {events.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h2 className="font-black text-navy mb-4">Payment History</h2>
+            <div className="space-y-3">
+              {events.map((e) => {
+                const meta = eventLabel[e.type] ?? { label: e.type, color: 'text-navy' }
+                const sign = e.type === 'refund_issued' ? '−' : '+'
+                return (
+                  <div key={e.id} className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${e.type === 'refund_issued' ? 'bg-red-400' : 'bg-green-500'}`} />
+                      <div>
+                        <p className={`text-sm font-semibold ${meta.color}`}>{meta.label}</p>
+                        {e.note && <p className="text-xs text-navy/50">{e.note}</p>}
+                        {e.stripe_id && (
+                          <p className="text-xs text-navy/40 font-mono">{e.stripe_id}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-sm font-bold ${e.type === 'refund_issued' ? 'text-red-500' : 'text-green-600'}`}>
+                        {sign}${e.amount.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-navy/40">
+                        {new Date(e.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
+
+        {order.status === 'paid' && <FulfillButton orderId={order.id} />}
 
         {order.fulfilled_at && (
           <p className="text-sm text-green-600 font-semibold">
             ✓ Fulfilled on {new Date(order.fulfilled_at).toLocaleString('en-US')}
           </p>
+        )}
+
+        {canRefund && (
+          <RefundPanel
+            orderId={order.id}
+            maxAmount={order.total}
+            alreadyRefunded={totalRefunded}
+          />
         )}
       </div>
     </div>
