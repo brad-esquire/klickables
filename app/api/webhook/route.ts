@@ -75,11 +75,12 @@ export async function POST(req: NextRequest) {
     })
 
     // Decrement stock atomically
-    const currentStock = variant?.stock ?? item.quantity
-    await db
-      .from('product_variants')
-      .update({ stock: Math.max(0, currentStock - item.quantity) })
-      .eq('id', item.variantId)
+    if (variant) {
+      await db
+        .from('product_variants')
+        .update({ stock: Math.max(0, variant.stock - item.quantity) })
+        .eq('id', item.variantId)
+    }
   }
 
   // Record payment event

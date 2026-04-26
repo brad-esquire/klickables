@@ -135,9 +135,19 @@ export class QueryBuilder {
       return this
     }
     // Parse embedded relations: "*, product_variants(*)"
+    // Split on commas that are NOT inside parentheses so "products(name, images)" stays together.
     const colParts: string[] = []
     const embedParts: Array<{ name: string; cols: string }> = []
-    for (const part of cols.split(',').map((s) => s.trim())) {
+    const parts: string[] = []
+    let depth = 0, cur = ''
+    for (const ch of cols) {
+      if (ch === '(') depth++
+      if (ch === ')') depth--
+      if (ch === ',' && depth === 0) { parts.push(cur.trim()); cur = '' }
+      else cur += ch
+    }
+    if (cur.trim()) parts.push(cur.trim())
+    for (const part of parts) {
       const m = part.match(/^(\w+)\(([^)]*)\)$/)
       if (m) embedParts.push({ name: m[1], cols: m[2] })
       else colParts.push(part)

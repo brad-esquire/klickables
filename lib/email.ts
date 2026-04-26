@@ -8,7 +8,7 @@ const FROM = process.env.EMAIL_FROM ?? ''
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? ''
 
 const SITE_URL = process.env.NEXTAUTH_URL ?? ''
-const LOGO_URL = `${SITE_URL}/logo.png`
+const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL}/logo.png`
 
 export async function sendOrderConfirmation(order: Order & { order_items: OrderItem[] }) {
   const isPickup = order.fulfillment_type === 'pickup'
