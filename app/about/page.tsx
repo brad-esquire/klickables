@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import Button from '@/components/ui/Button'
 
 export const metadata: Metadata = {
@@ -51,30 +52,51 @@ export default function AboutPage() {
             {[
               {
                 name: 'Kirra',
-                initial: 'K',
-                color: 'bg-pink',
+                image: '/Kirra.jpg',
+                scale: 1.4,
+                origin: '50% 5%',
                 role: 'Design & Colors',
                 bio: 'Kirra is the creative eye behind Klickables. She chooses every color combination and makes sure every clicker looks as good as it feels.',
               },
               {
                 name: 'Lorelei',
-                initial: 'L',
-                color: 'bg-purple',
-                role: 'Printing & Quality',
-                bio: 'Lorelei runs the printer and checks every single clicker before it leaves the door. Her attention to detail means you always get a perfect product.',
+                image: '/Lorelei.jpg',
+                bgSize: '200%',
+                bgPosition: 'center 16%',
+                role: 'CEO',
+                bio: 'Lorelei is the driving force behind Klickables. She leads the team, keeps everything on track, and makes sure every decision reflects the values the three of them started with.',
               },
               {
                 name: 'Isla',
-                initial: 'I',
-                color: 'bg-sky',
+                image: '/Isla.jpg',
+                scale: 1.4,
+                origin: '50% 25%',
                 role: 'Business & Shipping',
                 bio: 'Isla keeps everything running smoothly — from packing orders to making sure your clicker arrives safely and on time.',
               },
             ].map((girl) => (
               <div key={girl.name} className="text-center">
-                <div className={`w-24 h-24 rounded-full ${girl.color} flex items-center justify-center text-white text-4xl font-black mx-auto mb-4 shadow-lg`}>
-                  {girl.initial}
-                </div>
+                {'bgSize' in girl ? (
+                  <div
+                    className="w-52 h-52 mx-auto mb-4 rounded-full ring-4 ring-white/20 shadow-xl"
+                    style={{
+                      backgroundImage: `url(${girl.image})`,
+                      backgroundSize: girl.bgSize,
+                      backgroundPosition: girl.bgPosition,
+                      backgroundRepeat: 'no-repeat',
+                    }}
+                  />
+                ) : (
+                  <div className="w-52 h-52 mx-auto mb-4 relative rounded-full overflow-hidden ring-4 ring-white/20 shadow-xl">
+                    <Image
+                      src={girl.image}
+                      alt={girl.name}
+                      fill
+                      className="object-cover"
+                      style={{ transform: `scale(${girl.scale})`, transformOrigin: girl.origin }}
+                    />
+                  </div>
+                )}
                 <h3 className="text-xl font-black mb-1">{girl.name}</h3>
                 <p className="text-sky text-sm font-bold mb-3">{girl.role}</p>
                 <p className="text-white/70 text-sm leading-relaxed">{girl.bio}</p>
