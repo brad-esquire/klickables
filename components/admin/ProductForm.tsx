@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { slugify } from '@/lib/utils'
-import { Trash2, Plus, X, ImagePlus, Loader2, Play } from 'lucide-react'
+import { Trash2, Plus, X, ImagePlus, Loader2, Play, Star } from 'lucide-react'
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov)(\?|$)/i.test(url)
@@ -114,6 +114,10 @@ export default function ProductForm({ product }: ProductFormProps) {
     setImages((imgs) => imgs.filter((_, i) => i !== index))
   }
 
+  function setMainImage(index: number) {
+    setImages((imgs) => [imgs[index], ...imgs.filter((_, i) => i !== index)])
+  }
+
   function addVariant() {
     setVariants((v) => [...v, { color: '', size: '', price: '', stock: '0', sku: '' }])
   }
@@ -211,7 +215,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       {/* Media */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
         <h2 className="font-black text-navy">Product Media</h2>
-        <p className="text-xs text-navy/50">The first item is shown in the shop listing. Add videos (MP4, WebM, MOV — up to 50 MB) to show the clicker in action. Images up to 5 MB (JPEG, PNG, WebP, GIF).</p>
+        <p className="text-xs text-navy/50">Hover an image and click the ★ to set it as the main image shown in the shop. Add videos (MP4, WebM, MOV — up to 50 MB) to show the clicker in action. Images up to 5 MB (JPEG, PNG, WebP, GIF).</p>
 
         <div className="grid grid-cols-3 gap-3">
           {images.map((url, i) => (
@@ -240,10 +244,19 @@ export default function ProductForm({ product }: ProductFormProps) {
                   unoptimized={url.startsWith('/uploads/') || isGifUrl(url)}
                 />
               )}
-              {i === 0 && (
-                <span className="absolute bottom-1 left-1 bg-purple text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                  Main
+              {i === 0 ? (
+                <span className="absolute bottom-1 left-1 bg-purple text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                  <Star size={8} fill="white" /> Main
                 </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMainImage(i)}
+                  className="absolute bottom-1 left-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple"
+                  title="Set as main image"
+                >
+                  <Star size={10} />
+                </button>
               )}
               <button
                 type="button"
