@@ -8,7 +8,7 @@ const FROM = `Klickables <${process.env.EMAIL_FROM ?? ''}>`
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? ''
 
 const SITE_URL = process.env.NEXTAUTH_URL ?? ''
-const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL}/logo.png`
+const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL}/klickables_logo.png`
 
 export async function sendOrderConfirmation(order: Order & { order_items: OrderItem[] }) {
   const isPickup = order.fulfillment_type === 'pickup'
@@ -66,7 +66,7 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
           <td align="center" style="padding-bottom:24px;">
             <table cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;overflow:hidden;">
               <tr>
-                <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;padding:16px 24px;border-radius:12px;">
+                <td align="center" bgcolor="#1B1E4B" style="background-color:#1B1E4B;padding:16px 24px;border-radius:12px;">
                   <img src="${LOGO_URL}" width="160" alt="Klickables" style="display:block;" />
                 </td>
               </tr>
