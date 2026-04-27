@@ -25,7 +25,10 @@ export async function POST(req: NextRequest) {
   const pi = event.data.object as Stripe.PaymentIntent
   const meta = pi.metadata
 
-  const items: CartItem[] = JSON.parse(meta.cartJson ?? '[]')
+  // Reconstruct cart from chunked metadata keys (cart0, cart1, …) with fallback to legacy cartJson
+  let cartJson = ''
+  for (let i = 0; meta[`cart${i}`]; i++) cartJson += meta[`cart${i}`]
+  const items: CartItem[] = JSON.parse(cartJson || meta.cartJson || '[]')
   const shippingAddress: ShippingAddress = JSON.parse(meta.shippingAddressJson ?? '{}')
   const db = createAdminClient()
 
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     await db.from('order_items').insert({
       order_id: order.id,
-      product_id: item.productId,
+      product_id: (variant as unknown as { product_id: string } | undefined)?.product_id ?? item.productId,
       variant_id: item.variantId,
       product_name: productName,
       variant_label: variantLabel || null,

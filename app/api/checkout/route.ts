@@ -55,6 +55,18 @@ export async function POST(req: NextRequest) {
     const shippingCost = fulfillmentType === 'pickup' ? 0 : await getShippingCost(subtotal)
     const total = subtotal - discountAmount + shippingCost
 
+    // Strip cart down to only what the webhook needs (image/variantLabel not used server-side)
+    // and chunk across multiple metadata keys — Stripe limits each value to 500 chars
+    const compactCart = items.map(({ variantId, productName, price, quantity }) => ({
+      variantId, productName, price, quantity,
+    }))
+    const cartJson = JSON.stringify(compactCart)
+    const CHUNK = 490
+    const cartChunks: Record<string, string> = {}
+    for (let i = 0; i * CHUNK < cartJson.length; i++) {
+      cartChunks[`cart${i}`] = cartJson.slice(i * CHUNK, (i + 1) * CHUNK)
+    }
+
     // Create Stripe PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100),
@@ -67,7 +79,7 @@ export async function POST(req: NextRequest) {
         subtotal: subtotal.toString(),
         shippingCost: shippingCost.toString(),
         discountAmount: discountAmount.toString(),
-        cartJson: JSON.stringify(items),
+        ...cartChunks,
         shippingAddressJson: JSON.stringify(shippingAddress ?? {}),
         fulfillmentType: fulfillmentType ?? 'shipping',
         pickupLocation: pickupLocation ?? '',
