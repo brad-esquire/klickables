@@ -24,7 +24,7 @@ export default async function ShopPage() {
     <div className="max-w-6xl mx-auto px-4 py-12">
       <div className="mb-10">
         <h1 className="text-4xl font-black text-navy mb-2">Shop Clickers</h1>
-        <p className="text-navy/60">Pick your colors, grab your favourite — all 3D printed just for you.</p>
+        <p className="text-navy/60">Pick your colors, grab your favorite — all 3D printed just for you.</p>
       </div>
 
       {products.length > 0 ? (
