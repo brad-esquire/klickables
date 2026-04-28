@@ -8,7 +8,7 @@ import type { DiscountCode } from '@/types'
 
 async function getDiscounts(): Promise<DiscountCode[]> {
   const db = createAdminClient()
-  const { data } = await db.from('discount_codes').select('*').order('created_at' as keyof DiscountCode, { ascending: false })
+  const { data } = await db.from('discount_codes').select('*').order('code' as keyof DiscountCode, { ascending: true })
   return data ?? []
 }
 

@@ -6,7 +6,7 @@ export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = createAdminClient()
-  const { data } = await db.from('discount_codes').select('*').order('created_at' as never, { ascending: false })
+  const { data } = await db.from('discount_codes').select('*').order('code' as never, { ascending: true })
   return NextResponse.json(data ?? [])
 }
 
