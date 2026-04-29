@@ -53,6 +53,7 @@ export default async function HomePage() {
               width={420}
               height={360}
               priority
+              unoptimized
               className="drop-shadow-xl"
             />
           </div>

@@ -21,7 +21,7 @@ export default function AdminSidebar() {
   return (
     <aside className="w-56 bg-navy text-white flex flex-col min-h-screen sticky top-0">
       <div className="p-5 border-b border-white/10 flex items-center gap-2">
-        <Image src="/icon.png" alt="Klickables" width={32} height={32} />
+        <Image src="/icon.png" alt="Klickables" width={32} height={32} unoptimized />
         <div>
           <p className="font-black text-sm">Klickables</p>
           <p className="text-white/50 text-xs">Admin</p>

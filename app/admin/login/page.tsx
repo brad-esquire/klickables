@@ -31,7 +31,7 @@ export default async function AdminLoginPage({
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="bg-white rounded-3xl shadow-lg p-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <Image src="/icon.png" alt="Klickables" width={56} height={56} className="mx-auto mb-3" />
+          <Image src="/icon.png" alt="Klickables" width={56} height={56} className="mx-auto mb-3" unoptimized />
           <h1 className="text-2xl font-black text-navy">Admin Login</h1>
           <p className="text-navy/50 text-sm mt-1">Klickables Dashboard</p>
         </div>
