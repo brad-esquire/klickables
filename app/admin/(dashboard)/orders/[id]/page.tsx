@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
 import FulfillButton from '@/components/admin/FulfillButton'
+import MarkPaidButton from '@/components/admin/MarkPaidButton'
 import RefundPanel from '@/components/admin/RefundPanel'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
@@ -128,6 +129,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
         )}
 
+        {order.status === 'pending' && (
+          <div className="space-y-3">
+            <MarkPaidButton orderId={order.id} />
+            <FulfillButton orderId={order.id} />
+          </div>
+        )}
         {order.status === 'paid' && <FulfillButton orderId={order.id} />}
 
         {order.fulfilled_at && (

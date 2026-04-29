@@ -15,12 +15,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const { status } = await req.json()
+  const { status, paymentNote } = await req.json()
   const db = createAdminClient()
 
   const update: Record<string, unknown> = { status }
   if (status === 'fulfilled') update.fulfilled_at = new Date().toISOString()
 
   await db.from('orders').update(update).eq('id', id)
+
+  if (status === 'paid') {
+    const { data: order } = await db.from('orders').select('total').eq('id', id).single()
+    await db.from('payment_events').insert({
+      order_id: id,
+      type: 'payment_captured',
+      amount: order?.total ?? 0,
+      stripe_id: null,
+      note: paymentNote ?? 'Cash',
+    })
+  }
+
   return NextResponse.json({ success: true })
 }
