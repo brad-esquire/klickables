@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
+import { Plus } from 'lucide-react'
 import type { Order } from '@/types'
 
 async function getOrders(): Promise<Order[]> {
@@ -23,7 +25,12 @@ export default async function AdminOrdersPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-black text-navy mb-8">Orders</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-black text-navy">Orders</h1>
+        <Link href="/admin/orders/new">
+          <Button><Plus size={16} className="mr-1.5 inline" /> New Order</Button>
+        </Link>
+      </div>
 
       {orders.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
