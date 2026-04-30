@@ -176,7 +176,7 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
             <p style="margin:8px 0 0;font-size:13px;color:#bbb;">
               You're receiving this because you made a purchase at
               <a href="${SITE_URL}" style="color:#9655C8;text-decoration:none;">Klickables</a>,
-              by Kirra, Lorelei &amp; Isla.
+              by Kirra, Lorelei, Isla &amp; Ashley.
             </p>
           </td>
         </tr>
@@ -193,7 +193,7 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
     isPickup
       ? `Pickup at: ${order.pickup_location}\nWe'll contact you when your order is ready!`
       : `Ship to:\n${order.customer_name}\n${order.shipping_address.line1}${order.shipping_address.line2 ? '\n' + order.shipping_address.line2 : ''}\n${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}`
-  }\n\nQuestions? Email ${FROM}\n\n— Kirra, Lorelei & Isla\nklickables.net`
+  }\n\nQuestions? Email ${FROM}\n\n— Kirra, Lorelei, Isla & Ashley\nklickables.net`
 
   await Promise.all([
     getResend().emails.send({

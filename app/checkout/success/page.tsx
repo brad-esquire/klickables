@@ -17,7 +17,7 @@ export default function SuccessPage() {
         Thanks for your Klickables order! We&apos;ve sent a confirmation to your email.
       </p>
       <p className="text-navy/60 text-base mb-10">
-        Kirra, Lorelei & Isla will get your clicker ready and ship it out soon. 💜
+        Kirra, Lorelei, Isla & Ashley will get your clicker ready and ship it out soon. 💜
       </p>
       <Link href="/shop">
         <Button size="lg">Keep Shopping</Button>

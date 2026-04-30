@@ -34,7 +34,7 @@ export default async function HomePage() {
               <span className="text-pink">Love it.</span>
             </h1>
             <p className="text-navy/70 text-lg mb-8 max-w-md">
-              Satisfying, colorful 3D printed clickers — handcrafted by three best friends
+              Satisfying, colorful 3D printed clickers — handcrafted by best friends
               who just love to click.
             </p>
             <div className="flex gap-4 justify-center md:justify-start flex-wrap">
@@ -88,9 +88,9 @@ export default async function HomePage() {
       <section className="bg-navy text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-sky font-bold uppercase tracking-widest text-sm mb-3">Who we are</p>
-          <h2 className="text-3xl font-black mb-4">Made by Kirra, Lorelei & Isla</h2>
+          <h2 className="text-3xl font-black mb-4">Made by Kirra, Lorelei, Isla & Ashley</h2>
           <p className="text-white/75 text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
-            Klickables was born from three best friends who share a love of satisfying clicks and colorful things.
+            Klickables was born from best friends who share a love of satisfying clicks and colorful things.
             Every clicker is 3D printed with care and designed to bring joy.
           </p>
           <Link href="/about">

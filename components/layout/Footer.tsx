@@ -11,7 +11,7 @@ export default function Footer() {
             <span className="font-black text-lg">Klickables</span>
           </div>
           <p className="text-white/70 text-sm leading-relaxed">
-            3D printed clickers handcrafted with love by Kirra, Lorelei & Isla.
+            3D printed clickers handcrafted with love by Kirra, Lorelei, Isla & Ashley.
           </p>
         </div>
 
@@ -36,7 +36,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10 text-center py-4 text-xs text-white/40">
-        © {new Date().getFullYear()} Klickables. Made with 💜 by Kirra, Lorelei & Isla.
+        © {new Date().getFullYear()} Klickables. Made with 💜 by Kirra, Lorelei, Isla & Ashley.
       </div>
     </footer>
   )

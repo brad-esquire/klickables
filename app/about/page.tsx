@@ -16,7 +16,7 @@ export default function AboutPage() {
         <p className="text-purple font-bold uppercase tracking-widest text-sm mb-3">Our Story</p>
         <h1 className="text-5xl font-black text-navy mb-5">Meet the Girls</h1>
         <p className="text-navy/70 text-xl max-w-2xl mx-auto leading-relaxed">
-          Klickables was created by four best friends who discovered their love of 3D printing
+          Klickables was created by best friends who discovered their love of 3D printing
           — and couldn&apos;t stop clicking.
         </p>
       </section>

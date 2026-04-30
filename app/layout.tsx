@@ -12,7 +12,7 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: "Klickables — 3D Printed Clickers",
-  description: "Handcrafted 3D printed clickers by Kirra, Lorelei & Isla. Shop our colorful range of satisfying clickers.",
+  description: "Handcrafted 3D printed clickers by Kirra, Lorelei, Isla & Ashley. Shop our colorful range of satisfying clickers.",
 };
 
 export default function RootLayout({
