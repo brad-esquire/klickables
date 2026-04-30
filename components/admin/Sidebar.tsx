@@ -4,13 +4,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { LayoutDashboard, Package, ShoppingBag, Tag, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Tag, Settings, LogOut, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const links = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/admin/production', label: 'Production', icon: ClipboardList },
   { href: '/admin/discounts', label: 'Discounts', icon: Tag },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
