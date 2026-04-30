@@ -1,11 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
 import FulfillButton from '@/components/admin/FulfillButton'
 import MarkPaidButton from '@/components/admin/MarkPaidButton'
 import RefundPanel from '@/components/admin/RefundPanel'
+import { Pencil } from 'lucide-react'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
@@ -40,7 +43,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <h1 className="text-3xl font-black text-navy">Order #{order.id.slice(0, 8).toUpperCase()}</h1>
           <p className="text-navy/50 text-sm">{new Date(order.created_at).toLocaleString('en-US')}</p>
         </div>
-        <Badge variant={statusVariant[order.status] ?? 'navy'} className="text-sm px-4 py-1">{order.status}</Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant={statusVariant[order.status] ?? 'navy'} className="text-sm px-4 py-1">{order.status}</Badge>
+          <Link href={`/admin/orders/${order.id}/edit`}>
+            <Button variant="outline" size="sm"><Pencil size={14} className="mr-1.5" />Edit</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-5">
