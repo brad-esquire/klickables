@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
 import type { Order, OrderItem } from '@/types'
@@ -22,18 +23,36 @@ const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   pending: 'navy',
 }
 
-type AggItem = { productName: string; variantLabel: string; total: number; confirmed: number }
+type AggItem = {
+  productId: string
+  productName: string
+  variantLabel: string
+  imageUrl: string
+  total: number
+  confirmed: number
+}
 
 export default async function ProductionQueuePage() {
-  const orders = await getUnfulfilledOrders()
+  const db = createAdminClient()
+  const [orders, productsRes] = await Promise.all([
+    getUnfulfilledOrders(),
+    db.from('products').select('id, images'),
+  ])
+
+  const imageMap = new Map<string, string>()
+  for (const p of productsRes.data ?? []) {
+    if (p.images?.[0]) imageMap.set(p.id, p.images[0])
+  }
 
   const map = new Map<string, AggItem>()
   for (const order of orders) {
     for (const item of order.order_items) {
-      const key = `${item.product_name}||${item.variant_label ?? ''}`
+      const key = `${item.product_id}||${item.variant_label ?? ''}`
       const existing = map.get(key) ?? {
+        productId: item.product_id,
         productName: item.product_name,
         variantLabel: item.variant_label ?? '',
+        imageUrl: imageMap.get(item.product_id) ?? '',
         total: 0,
         confirmed: 0,
       }
@@ -101,11 +120,26 @@ export default async function ProductionQueuePage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((item) => (
-                  <tr key={`${item.productName}||${item.variantLabel}`} className="hover:bg-gray-50">
-                    <td className="px-5 py-3.5 font-semibold text-navy">{item.productName}</td>
-                    <td className="px-5 py-3.5 text-navy/70 text-sm">{item.variantLabel || '—'}</td>
-                    <td className="px-5 py-3.5 text-right font-semibold text-navy/60">{item.confirmed}</td>
-                    <td className="px-5 py-3.5 text-right">
+                  <tr key={`${item.productId}||${item.variantLabel}`} className="hover:bg-gray-50">
+                    <td className="px-5 py-3 font-semibold text-navy">
+                      <div className="flex items-center gap-3">
+                        {item.imageUrl ? (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.productName}
+                            width={48}
+                            height={48}
+                            className="rounded-lg object-cover bg-cream flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0" />
+                        )}
+                        <span>{item.productName}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-navy/70 text-sm">{item.variantLabel || '—'}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-navy/60">{item.confirmed}</td>
+                    <td className="px-5 py-3 text-right">
                       <span className="text-2xl font-black text-pink">{item.total}</span>
                     </td>
                   </tr>
