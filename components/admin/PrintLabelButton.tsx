@@ -37,7 +37,7 @@ export default function PrintLabelButton({ order }: { order: Order }) {
       align-items: center;
       gap: 10px;
     }
-    .header img { width: 36px; height: 36px; }
+    .header img { width: 36px; height: 36px; object-fit: contain; display: block; flex-shrink: 0; }
     .header span { color: white; font-weight: 900; font-size: 20px; letter-spacing: -0.5px; }
     .section { padding: 14px 18px; border-bottom: 1.5px solid #e5e7eb; }
     .label-text {

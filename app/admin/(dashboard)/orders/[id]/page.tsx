@@ -10,6 +10,7 @@ import MarkPaidButton from '@/components/admin/MarkPaidButton'
 import RefundPanel from '@/components/admin/RefundPanel'
 import { Pencil } from 'lucide-react'
 import PrintLabelButton from '@/components/admin/PrintLabelButton'
+import PrintReceiptButton from '@/components/admin/PrintReceiptButton'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
@@ -49,6 +50,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {order.fulfillment_type === 'shipping' && (
             <PrintLabelButton order={order} />
           )}
+          <PrintReceiptButton order={order} />
           <Link href={`/admin/orders/${order.id}/edit`}>
             <Button variant="outline" size="sm"><Pencil size={14} className="mr-1.5" />Edit</Button>
           </Link>
