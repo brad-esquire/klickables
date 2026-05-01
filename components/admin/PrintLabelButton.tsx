@@ -8,6 +8,7 @@ export default function PrintLabelButton({ order }: { order: Order }) {
   function handlePrint() {
     const addr = order.shipping_address
     const orderNum = order.id.slice(0, 8).toUpperCase()
+    const logoUrl = `${window.location.origin}/klickables_logo.png`
 
     const html = `<!DOCTYPE html>
 <html>
@@ -16,46 +17,44 @@ export default function PrintLabelButton({ order }: { order: Order }) {
   <title>Shipping Label — #${orderNum}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 4in; font-family: Arial, sans-serif; background: white; }
-    @page { size: 4in 6in; margin: 0; }
+    html, body { width: 3in; font-family: Arial, sans-serif; background: white; }
+    @page { size: 3in 4in; margin: 0; }
 
     .label {
-      width: 4in;
-      height: 6in;
+      width: 3in;
+      height: 4in;
       border: 2px solid #1B1E4B;
-      border-radius: 8px;
+      border-radius: 6px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      margin: 0;
     }
     .header {
-      background: #1B1E4B;
-      padding: 14px 18px;
+      padding: 10px 14px;
+      border-bottom: 1.5px solid #e5e7eb;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
     }
-    .header img { width: 36px; height: 36px; object-fit: contain; display: block; flex-shrink: 0; }
-    .header span { color: white; font-weight: 900; font-size: 20px; letter-spacing: -0.5px; }
-    .section { padding: 14px 18px; border-bottom: 1.5px solid #e5e7eb; }
+    .header img { height: 32px; width: auto; object-fit: contain; display: block; }
+    .section { padding: 10px 14px; border-bottom: 1.5px solid #e5e7eb; }
     .label-text {
       font-size: 10px;
       font-weight: 700;
       color: #9ca3af;
       letter-spacing: 1px;
       text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .from-body { font-size: 13px; color: #1B1E4B; line-height: 1.6; }
     .from-body strong { font-weight: 700; }
-    .arrow { text-align: center; font-size: 18px; color: #d1d5db; padding: 6px 0; border-bottom: 1.5px solid #e5e7eb; }
-    .to-section { padding: 18px 18px; flex: 1; }
-    .to-name { font-size: 20px; font-weight: 900; color: #1B1E4B; margin-bottom: 10px; line-height: 1.2; }
+    .arrow { text-align: center; font-size: 16px; color: #d1d5db; padding: 4px 0; border-bottom: 1.5px solid #e5e7eb; }
+    .to-section { padding: 12px 14px; flex: 1; }
+    .to-name { font-size: 20px; font-weight: 900; color: #1B1E4B; margin-bottom: 8px; line-height: 1.2; }
     .to-addr { font-size: 15px; color: #1B1E4B; line-height: 1.7; }
     .footer {
       border-top: 1.5px solid #e5e7eb;
-      padding: 10px 18px;
+      padding: 7px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -66,8 +65,7 @@ export default function PrintLabelButton({ order }: { order: Order }) {
 <body>
   <div class="label">
     <div class="header">
-      <img src="/icon.png" alt="Klickables" />
-      <span>Klickables</span>
+      <img src="${logoUrl}" alt="Klickables" />
     </div>
 
     <div class="section">
@@ -102,7 +100,7 @@ export default function PrintLabelButton({ order }: { order: Order }) {
 </body>
 </html>`
 
-    const win = window.open('', '_blank', 'width=500,height=720,toolbar=0,menubar=0,scrollbars=0')
+    const win = window.open('', '_blank', 'width=400,height=560,toolbar=0,menubar=0,scrollbars=0')
     if (!win) return
     win.document.write(html)
     win.document.close()

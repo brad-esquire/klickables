@@ -7,6 +7,7 @@ import type { Order, OrderItem } from '@/types'
 export default function PrintReceiptButton({ order }: { order: Order & { order_items: OrderItem[] } }) {
   function handlePrint() {
     const orderNum = order.id.slice(0, 8).toUpperCase()
+    const logoUrl = `${window.location.origin}/klickables_logo.png`
     const orderDate = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
     const itemRows = order.order_items.map((item) => `
@@ -69,7 +70,7 @@ export default function PrintReceiptButton({ order }: { order: Order & { order_i
 <body>
   <div class="receipt">
     <div class="header">
-      <img src="/icon.png" alt="Klickables" />
+      <img src="${logoUrl}" alt="Klickables" />
       <div class="brand">Klickables</div>
       <div class="tagline">Thank you for your order! 💜</div>
     </div>

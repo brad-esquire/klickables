@@ -8,6 +8,7 @@ export default function PrintBothButton({ order }: { order: Order & { order_item
   function handlePrint() {
     const addr = order.shipping_address
     const orderNum = order.id.slice(0, 8).toUpperCase()
+    const logoUrl = `${window.location.origin}/klickables_logo.png`
     const orderDate = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
     const itemRows = order.order_items.map((item) => `
@@ -57,32 +58,31 @@ export default function PrintBothButton({ order }: { order: Order & { order_item
 
     /* ── LABEL ── */
     .label {
-      width: 4in;
-      height: 6in;
+      width: 3in;
+      height: 4in;
       border: 2px solid #1B1E4B;
-      border-radius: 8px;
+      border-radius: 6px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       flex-shrink: 0;
     }
     .label-header {
-      background: #1B1E4B;
-      padding: 14px 18px;
+      padding: 10px 14px;
+      border-bottom: 1.5px solid #e5e7eb;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
     }
-    .label-header img { width:36px;height:36px;object-fit:contain;display:block;flex-shrink:0; }
-    .label-header span { color:white;font-weight:900;font-size:20px;letter-spacing:-0.5px; }
-    .label-section { padding:14px 18px;border-bottom:1.5px solid #e5e7eb; }
-    .label-tag { font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px; }
+    .label-header img { height:32px;width:auto;object-fit:contain;display:block; }
+    .label-section { padding:10px 14px;border-bottom:1.5px solid #e5e7eb; }
+    .label-tag { font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px; }
     .label-from { font-size:13px;color:#1B1E4B;line-height:1.6; }
-    .label-arrow { text-align:center;font-size:18px;color:#d1d5db;padding:6px 0;border-bottom:1.5px solid #e5e7eb; }
-    .label-to { padding:18px;flex:1; }
-    .label-to-name { font-size:20px;font-weight:900;color:#1B1E4B;margin-bottom:10px;line-height:1.2; }
+    .label-arrow { text-align:center;font-size:16px;color:#d1d5db;padding:4px 0;border-bottom:1.5px solid #e5e7eb; }
+    .label-to { padding:12px 14px;flex:1; }
+    .label-to-name { font-size:20px;font-weight:900;color:#1B1E4B;margin-bottom:8px;line-height:1.2; }
     .label-to-addr { font-size:15px;color:#1B1E4B;line-height:1.7; }
-    .label-footer { border-top:1.5px solid #e5e7eb;padding:10px 18px;display:flex;justify-content:space-between; }
+    .label-footer { border-top:1.5px solid #e5e7eb;padding:7px 14px;display:flex;justify-content:space-between; }
     .label-footer span { font-size:10px;color:#9ca3af; }
 
     /* ── RECEIPT ── */
@@ -115,8 +115,7 @@ export default function PrintBothButton({ order }: { order: Order & { order_item
     <!-- LABEL -->
     <div class="label">
       <div class="label-header">
-        <img src="/icon.png" alt="Klickables"/>
-        <span>Klickables</span>
+        <img src="${logoUrl}" alt="Klickables"/>
       </div>
       <div class="label-section">
         <div class="label-tag">From</div>
