@@ -95,6 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       amount: balanceTx.fee / 100,
       stripe_id: balanceTx.id,
       note: `${feePercent}% — net $${(balanceTx.net / 100).toFixed(2)}`,
+      created_at: new Date(balanceTx.created * 1000).toISOString(),
     })
     return NextResponse.json({ success: true })
   }

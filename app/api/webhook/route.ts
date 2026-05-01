@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
           amount: balanceTx.fee / 100,
           stripe_id: balanceTx.id,
           note: `${feePercent}% — net $${(balanceTx.net / 100).toFixed(2)}`,
+          created_at: new Date(balanceTx.created * 1000).toISOString(),
         })
       }
     }

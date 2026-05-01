@@ -22,7 +22,7 @@ async function getAllExpenses(): Promise<ExpenseRow[]> {
   const [{ data: manual }, { data: events }] = await Promise.all([
     db.from('expenses').select('*'),
     db.from('payment_events')
-      .select('id, type, amount, note, created_at, order_id, orders(id)')
+      .select('id, type, amount, note, created_at, order_id, orders(id, created_at, shipped_at)')
       .in('type', ['stripe_fee', 'postage_cost']),
   ])
 
@@ -37,9 +37,14 @@ async function getAllExpenses(): Promise<ExpenseRow[]> {
   }))
 
   const orderRows: ExpenseRow[] = (events ?? []).map((e) => {
-    const order = (Array.isArray(e.orders) ? e.orders[0] : e.orders) as { id: string } | null
+    const order = (Array.isArray(e.orders) ? e.orders[0] : e.orders) as { id: string; created_at: string; shipped_at: string | null } | null
     const orderNum = order?.id?.slice(0, 8).toUpperCase() ?? ''
     const isPostage = e.type === 'postage_cost'
+    // Use the authoritative date from the order rather than payment_event created_at,
+    // so retroactively-fetched rows show the correct payment/ship date.
+    const date = isPostage
+      ? (order?.shipped_at ?? order?.created_at ?? e.created_at).slice(0, 10)
+      : (order?.created_at ?? e.created_at).slice(0, 10)
     return {
       id: e.id,
       description: isPostage
@@ -47,7 +52,7 @@ async function getAllExpenses(): Promise<ExpenseRow[]> {
         : `Stripe fee — Order #${orderNum}`,
       amount: e.amount,
       category: isPostage ? 'Postage' : 'Stripe Fee',
-      date: e.created_at.slice(0, 10),
+      date,
       source: 'order',
       orderId: order?.id,
     }
