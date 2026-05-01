@@ -7,6 +7,7 @@ interface VariantSelectorProps {
   variants: ProductVariant[]
   selectedId: string | null
   onSelect: (variant: ProductVariant) => void
+  ignoreStock?: boolean
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -27,7 +28,7 @@ const GRADIENT_MAP: Record<string, string> = {
   'titanium black': 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 20%, #4a4a4a 35%, #111 50%, #555 65%, #1a1a1a 80%, #0a0a0a 100%)',
 }
 
-export default function VariantSelector({ variants, selectedId, onSelect }: VariantSelectorProps) {
+export default function VariantSelector({ variants, selectedId, onSelect, ignoreStock }: VariantSelectorProps) {
   const colors = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[]
   const sizes = [...new Set(variants.map((v) => v.size).filter(Boolean))] as string[]
 
@@ -74,22 +75,26 @@ export default function VariantSelector({ variants, selectedId, onSelect }: Vari
             {sizes.map((size) => {
               const variant = variants.find((v) => v.size === size && (selectedId ? v.color === variants.find(x => x.id === selectedId)?.color : true))
               const isSelected = variant && selectedId === variant?.id
+              const outOfStock = !ignoreStock && variant?.stock === 0
 
               return (
                 <button
                   key={size}
+                  disabled={outOfStock}
                   onClick={() => {
                     const match = variants.find(
                       (v) => v.size === size &&
                         (colors.length === 0 || v.color === variants.find(x => x.id === selectedId)?.color)
                     ) ?? variants.find((v) => v.size === size)
-                    if (match) onSelect(match)
+                    if (match && !outOfStock) onSelect(match)
                   }}
                   className={cn(
                     'px-4 py-1.5 rounded-full text-sm font-bold border-2 transition-all',
                     isSelected
                       ? 'bg-navy text-white border-navy'
-                      : 'border-navy text-navy hover:bg-navy hover:text-white'
+                      : outOfStock
+                        ? 'border-gray-200 text-gray-300 line-through cursor-not-allowed'
+                        : 'border-navy text-navy hover:bg-navy hover:text-white'
                   )}
                 >
                   {size}

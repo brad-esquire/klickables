@@ -15,6 +15,7 @@ export interface Product {
   description: string | null
   images: string[]
   active: boolean
+  ignore_stock: boolean
   created_at: string
   product_variants?: ProductVariant[]
 }

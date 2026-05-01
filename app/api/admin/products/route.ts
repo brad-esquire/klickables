@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, slug, description, active, images, variants } = body
+  const { name, slug, description, active, ignore_stock, images, variants } = body
 
   const db = createAdminClient()
   const { data: product, error } = await db
     .from('products')
-    .insert({ name, slug, description, active, images: images ?? [] })
+    .insert({ name, slug, description, active, ignore_stock: ignore_stock ?? false, images: images ?? [] })
     .select()
     .single()
 

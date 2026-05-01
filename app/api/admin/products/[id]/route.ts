@@ -15,10 +15,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const { name, slug, description, active, images, variants } = await req.json()
+  const { name, slug, description, active, ignore_stock, images, variants } = await req.json()
   const db = createAdminClient()
 
-  const { error } = await db.from('products').update({ name, slug, description, active, images: images ?? [], updated_at: new Date().toISOString() }).eq('id', id)
+  const { error } = await db.from('products').update({ name, slug, description, active, ignore_stock: ignore_stock ?? false, images: images ?? [], updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
   // Upsert variants: update existing (by id), insert new (no id), delete removed

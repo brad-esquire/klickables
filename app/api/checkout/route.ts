@@ -26,15 +26,22 @@ export async function POST(req: NextRequest) {
     const variantIds = items.map((i) => i.variantId)
     const { data: variants } = await db
       .from('product_variants')
-      .select('id, price, product_id')
+      .select('id, price, stock, product_id')
       .in('id', variantIds)
 
     if (!variants) return NextResponse.json({ error: 'Could not verify items' }, { status: 400 })
+
+    const productIds = [...new Set(variants.map((v) => v.product_id))]
+    const { data: products } = await db.from('products').select('id, ignore_stock').in('id', productIds)
+    const ignoreStockMap = new Map((products ?? []).map((p) => [p.id, p.ignore_stock]))
 
     let subtotal = 0
     for (const item of items) {
       const dbVariant = variants.find((v) => v.id === item.variantId)
       if (!dbVariant) return NextResponse.json({ error: `Item not found` }, { status: 400 })
+      if (!ignoreStockMap.get(dbVariant.product_id) && dbVariant.stock < item.quantity) {
+        return NextResponse.json({ error: `Insufficient stock` }, { status: 400 })
+      }
       subtotal += dbVariant.price * item.quantity
     }
 

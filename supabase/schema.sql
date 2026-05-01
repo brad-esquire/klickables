@@ -9,6 +9,7 @@ CREATE TABLE products (
   description text,
   images text[] DEFAULT '{}',
   active boolean DEFAULT true,
+  ignore_stock boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

@@ -38,6 +38,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [slug, setSlug] = useState(product?.slug ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [active, setActive] = useState(product?.active ?? true)
+  const [ignoreStock, setIgnoreStock] = useState(product?.ignore_stock ?? false)
   const [images, setImages] = useState<string[]>(product?.images ?? [])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -140,6 +141,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       slug,
       description,
       active,
+      ignore_stock: ignoreStock,
       images,
       variants: variants.map((v) => ({
         id: v.id,
@@ -209,6 +211,14 @@ export default function ProductForm({ product }: ProductFormProps) {
         <label className="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="w-4 h-4 accent-purple" />
           <span className="font-semibold text-navy text-sm">Active (visible in shop)</span>
+        </label>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={ignoreStock} onChange={(e) => setIgnoreStock(e.target.checked)} className="w-4 h-4 accent-purple" />
+          <div>
+            <span className="font-semibold text-navy text-sm">Allow purchase when out of stock</span>
+            <p className="text-xs text-navy/50 mt-0.5">Customers can still buy this product even if stock reaches zero</p>
+          </div>
         </label>
       </div>
 
