@@ -16,6 +16,7 @@ import ShipButton from '@/components/admin/ShipButton'
 import OutForDeliveryButton from '@/components/admin/OutForDeliveryButton'
 import OrderNotes from '@/components/admin/OrderNotes'
 import FetchStripeFeeButton from '@/components/admin/FetchStripeFeeButton'
+import AddPostageCostButton from '@/components/admin/AddPostageCostButton'
 import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
@@ -129,9 +130,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-black text-navy">Payment History</h2>
-              {order.stripe_payment_intent_id && !events.some((e) => e.type === 'stripe_fee') && (
-                <FetchStripeFeeButton orderId={order.id} />
-              )}
+              <div className="flex items-center gap-4">
+                {order.status === 'shipped' && !events.some((e) => e.type === 'postage_cost') && (
+                  <AddPostageCostButton orderId={order.id} carrier={order.shipping_carrier} />
+                )}
+                {order.stripe_payment_intent_id && !events.some((e) => e.type === 'stripe_fee') && (
+                  <FetchStripeFeeButton orderId={order.id} />
+                )}
+              </div>
             </div>
             <div className="space-y-3">
               {events.map((e) => {

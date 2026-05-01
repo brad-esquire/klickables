@@ -56,6 +56,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { status, paymentNote, trackingNumber, shippingCarrier, postageCost, notes, action } = body
   const db = createAdminClient()
 
+  if (action === 'add_postage') {
+    const { postageCost, shippingCarrier } = body
+    if (!postageCost || postageCost <= 0) {
+      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
+    }
+    await db.from('payment_events').insert({
+      order_id: id,
+      type: 'postage_cost',
+      amount: postageCost,
+      stripe_id: null,
+      note: shippingCarrier ?? 'USPS',
+    })
+    return NextResponse.json({ success: true })
+  }
+
   if (action === 'fetch_stripe_fee') {
     const { data: order } = await db.from('orders').select('stripe_payment_intent_id, total').eq('id', id).single()
     if (!order?.stripe_payment_intent_id) {
