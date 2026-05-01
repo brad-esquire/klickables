@@ -156,7 +156,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             disabled={!selectedVariant}
             className="w-full"
           >
-            {!inStock ? 'Out of Stock' : added ? '✓ Added to Cart!' : 'Add to Cart'}
+            {added ? '✓ Added to Cart!' : 'Add to Cart'}
           </Button>
         </div>
       </div>
