@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
   const body = await req.json()
-  const { status, paymentNote, trackingNumber, shippingCarrier, notes, action } = body
+  const { status, paymentNote, trackingNumber, shippingCarrier, postageCost, notes, action } = body
   const db = createAdminClient()
 
   if (action === 'fetch_stripe_fee') {
@@ -110,10 +110,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
   }
 
-  if (status === 'shipped' && trackingNumber) {
-    const { data: order } = await db.from('orders').select('*').eq('id', id).single()
-    if (order) {
-      await sendShippedNotification(order, trackingNumber, shippingCarrier ?? 'USPS').catch(() => {})
+  if (status === 'shipped') {
+    if (postageCost && postageCost > 0) {
+      await db.from('payment_events').insert({
+        order_id: id,
+        type: 'postage_cost',
+        amount: postageCost,
+        stripe_id: null,
+        note: shippingCarrier ?? 'USPS',
+      })
+    }
+    if (trackingNumber) {
+      const { data: order } = await db.from('orders').select('*').eq('id', id).single()
+      if (order) {
+        await sendShippedNotification(order, trackingNumber, shippingCarrier ?? 'USPS').catch(() => {})
+      }
     }
   }
 

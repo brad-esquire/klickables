@@ -29,9 +29,10 @@ const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
 }
 
 const eventLabel: Record<string, { label: string; color: string }> = {
-  payment_captured: { label: 'Payment captured', color: 'text-green-600' },
-  refund_issued:    { label: 'Refund issued',     color: 'text-red-500' },
+  payment_captured: { label: 'Payment captured',     color: 'text-green-600' },
+  refund_issued:    { label: 'Refund issued',         color: 'text-red-500' },
   stripe_fee:       { label: 'Stripe processing fee', color: 'text-orange-500' },
+  postage_cost:     { label: 'Postage',               color: 'text-orange-500' },
 }
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -135,9 +136,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <div className="space-y-3">
               {events.map((e) => {
                 const meta = eventLabel[e.type] ?? { label: e.type, color: 'text-navy' }
-                const isCost = e.type === 'refund_issued' || e.type === 'stripe_fee'
+                const isCost = e.type === 'refund_issued' || e.type === 'stripe_fee' || e.type === 'postage_cost'
                 const sign = isCost ? '−' : '+'
-                const dotColor = e.type === 'stripe_fee' ? 'bg-orange-400' : isCost ? 'bg-red-400' : 'bg-green-500'
+                const dotColor = e.type === 'stripe_fee' || e.type === 'postage_cost' ? 'bg-orange-400' : isCost ? 'bg-red-400' : 'bg-green-500'
                 return (
                   <div key={e.id} className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
@@ -151,7 +152,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`text-sm font-bold ${e.type === 'stripe_fee' ? 'text-orange-500' : isCost ? 'text-red-500' : 'text-green-600'}`}>
+                      <p className={`text-sm font-bold ${e.type === 'stripe_fee' || e.type === 'postage_cost' ? 'text-orange-500' : isCost ? 'text-red-500' : 'text-green-600'}`}>
                         {sign}${e.amount.toFixed(2)}
                       </p>
                       <p className="text-xs text-navy/40">

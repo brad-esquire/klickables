@@ -10,20 +10,21 @@ async function getDashboardStats() {
     { count: pendingOrders },
     { data: revenue },
     { data: lowStock },
-    { data: stripeFees },
+    { data: feeEvents },
     { data: expenses },
   ] = await Promise.all([
     db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'fulfilled', 'shipped', 'out_for_delivery']),
     db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'shipped', 'out_for_delivery']),
     db.from('orders').select('total').in('status', ['paid', 'fulfilled', 'shipped', 'out_for_delivery']),
     db.from('product_variants').select('id, sku, color, size, stock, products(name)').lte('stock', 3).gt('stock', 0),
-    db.from('payment_events').select('amount').eq('type', 'stripe_fee'),
+    db.from('payment_events').select('amount, type').in('type', ['stripe_fee', 'postage_cost']),
     db.from('expenses').select('amount'),
   ])
 
   const totalRevenue = revenue?.reduce((s, o) => s + (o.total ?? 0), 0) ?? 0
-  const totalStripeFees = stripeFees?.reduce((s, e) => s + e.amount, 0) ?? 0
-  const totalExpenses = expenses?.reduce((s, e) => s + e.amount, 0) ?? 0
+  const totalStripeFees = feeEvents?.filter((e) => e.type === 'stripe_fee').reduce((s, e) => s + e.amount, 0) ?? 0
+  const totalPostage = feeEvents?.filter((e) => e.type === 'postage_cost').reduce((s, e) => s + e.amount, 0) ?? 0
+  const totalExpenses = (expenses?.reduce((s, e) => s + e.amount, 0) ?? 0) + totalPostage
   const netIncome = totalRevenue - totalStripeFees - totalExpenses
 
   return {

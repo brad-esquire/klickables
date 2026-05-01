@@ -11,11 +11,13 @@ export default function ShipButton({ orderId }: { orderId: string }) {
   const [open, setOpen] = useState(false)
   const [carrier, setCarrier] = useState<Carrier>('USPS')
   const [tracking, setTracking] = useState('')
+  const [postage, setPostage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   function handleOpen() {
     setTracking('')
+    setPostage('')
     setError('')
     setCarrier('USPS')
     setOpen(true)
@@ -26,11 +28,16 @@ export default function ShipButton({ orderId }: { orderId: string }) {
       setError('Tracking number is required.')
       return
     }
+    const postageCost = postage ? parseFloat(postage) : null
+    if (postage && (isNaN(postageCost!) || postageCost! <= 0)) {
+      setError('Enter a valid postage amount.')
+      return
+    }
     setLoading(true)
     await fetch(`/api/admin/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'shipped', trackingNumber: tracking.trim(), shippingCarrier: carrier }),
+      body: JSON.stringify({ status: 'shipped', trackingNumber: tracking.trim(), shippingCarrier: carrier, postageCost }),
     })
     window.location.reload()
   }
@@ -84,8 +91,27 @@ export default function ShipButton({ orderId }: { orderId: string }) {
                   className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple font-mono text-sm"
                   autoFocus
                 />
-                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
               </div>
+
+              <div>
+                <label className="block text-sm font-bold text-navy mb-2">
+                  Actual Postage Cost <span className="text-navy/40 font-normal">(optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/40 text-sm font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={postage}
+                    onChange={(e) => { setPostage(e.target.value); setError('') }}
+                    placeholder="0.00"
+                    className="w-full border-2 border-gray-200 rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:border-purple text-sm"
+                  />
+                </div>
+              </div>
+
+              {error && <p className="text-red-500 text-sm">{error}</p>}
             </div>
 
             <div className="flex gap-3 mt-6">

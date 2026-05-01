@@ -115,7 +115,7 @@ export interface SiteSettings {
   shipping_cost: string
 }
 
-export type PaymentEventType = 'payment_captured' | 'refund_issued' | 'stripe_fee'
+export type PaymentEventType = 'payment_captured' | 'refund_issued' | 'stripe_fee' | 'postage_cost'
 
 export interface PaymentEvent {
   id: string
