@@ -8,7 +8,8 @@ import Button from '@/components/ui/Button'
 import FulfillButton from '@/components/admin/FulfillButton'
 import MarkPaidButton from '@/components/admin/MarkPaidButton'
 import RefundPanel from '@/components/admin/RefundPanel'
-import { Pencil, Printer } from 'lucide-react'
+import { Pencil } from 'lucide-react'
+import PrintLabelButton from '@/components/admin/PrintLabelButton'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
@@ -46,9 +47,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <div className="flex items-center gap-3">
           <Badge variant={statusVariant[order.status] ?? 'navy'} className="text-sm px-4 py-1">{order.status}</Badge>
           {order.fulfillment_type === 'shipping' && (
-            <Link href={`/admin/orders/${order.id}/label`} target="_blank">
-              <Button variant="outline" size="sm"><Printer size={14} className="mr-1.5" />Print Label</Button>
-            </Link>
+            <PrintLabelButton order={order} />
           )}
           <Link href={`/admin/orders/${order.id}/edit`}>
             <Button variant="outline" size="sm"><Pencil size={14} className="mr-1.5" />Edit</Button>
