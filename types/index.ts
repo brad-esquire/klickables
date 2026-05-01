@@ -40,7 +40,7 @@ export interface ShippingAddress {
   country: string
 }
 
-export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled'
+export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'shipped' | 'out_for_delivery'
 export type FulfillmentType = 'shipping' | 'pickup'
 
 
@@ -59,9 +59,32 @@ export interface Order {
   total: number
   discount_code: string | null
   created_at: string
+  notes: string | null
   fulfilled_at: string | null
+  tracking_number: string | null
+  shipping_carrier: string | null
+  shipped_at: string | null
   order_items?: OrderItem[]
 }
+
+export interface Expense {
+  id: string
+  description: string
+  amount: number
+  category: string
+  date: string
+  created_at: string
+}
+
+export const EXPENSE_CATEGORIES = [
+  'Materials',
+  'Packaging',
+  'Shipping Supplies',
+  'Marketing',
+  'Equipment',
+  'Fees',
+  'Other',
+] as const
 
 export type DiscountType = 'percentage' | 'fixed'
 
@@ -92,7 +115,7 @@ export interface SiteSettings {
   shipping_cost: string
 }
 
-export type PaymentEventType = 'payment_captured' | 'refund_issued'
+export type PaymentEventType = 'payment_captured' | 'refund_issued' | 'stripe_fee'
 
 export interface PaymentEvent {
   id: string

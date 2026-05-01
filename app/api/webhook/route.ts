@@ -95,6 +95,28 @@ export async function POST(req: NextRequest) {
     note: null,
   })
 
+  // Record Stripe processing fee from balance transaction
+  try {
+    if (pi.latest_charge) {
+      const charge = await stripe.charges.retrieve(pi.latest_charge as string, {
+        expand: ['balance_transaction'],
+      })
+      const balanceTx = charge.balance_transaction as Stripe.BalanceTransaction
+      if (balanceTx && balanceTx.fee > 0) {
+        const feePercent = ((balanceTx.fee / balanceTx.amount) * 100).toFixed(2)
+        await db.from('payment_events').insert({
+          order_id: order.id,
+          type: 'stripe_fee',
+          amount: balanceTx.fee / 100,
+          stripe_id: balanceTx.id,
+          note: `${feePercent}% — net $${(balanceTx.net / 100).toFixed(2)}`,
+        })
+      }
+    }
+  } catch (feeErr) {
+    console.error('Failed to record Stripe fee:', feeErr)
+  }
+
   // Increment discount usage
   if (meta.discountId) {
     const { data: disc } = await db.from('discount_codes').select('uses_count').eq('id', meta.discountId).single()

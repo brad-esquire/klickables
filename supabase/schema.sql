@@ -39,7 +39,9 @@ CREATE TABLE orders (
   total numeric(10,2),
   discount_code text,
   created_at timestamptz DEFAULT now(),
-  fulfilled_at timestamptz
+  fulfilled_at timestamptz,
+  tracking_number text,
+  shipped_at timestamptz
 );
 
 -- Order line items
@@ -75,6 +77,16 @@ CREATE TABLE payment_events (
   amount numeric(10,2) NOT NULL,
   stripe_id text,
   note text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Expenses (for P&L tracking)
+CREATE TABLE expenses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  description text NOT NULL,
+  amount numeric(10,2) NOT NULL,
+  category text NOT NULL DEFAULT 'Other',
+  date date NOT NULL DEFAULT CURRENT_DATE,
   created_at timestamptz DEFAULT now()
 );
 

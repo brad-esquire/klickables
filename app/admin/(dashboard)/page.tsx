@@ -1,42 +1,100 @@
 export const dynamic = 'force-dynamic'
 
 import { createAdminClient } from '@/lib/supabase'
-import { Package, ShoppingBag, DollarSign, AlertTriangle } from 'lucide-react'
+import { Package, ShoppingBag, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 async function getDashboardStats() {
   const db = createAdminClient()
-  const [{ count: totalOrders }, { count: pendingOrders }, { data: revenue }, { data: lowStock }] = await Promise.all([
-    db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'fulfilled']),
-    db.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid'),
-    db.from('orders').select('total').in('status', ['paid', 'fulfilled']),
+  const [
+    { count: totalOrders },
+    { count: pendingOrders },
+    { data: revenue },
+    { data: lowStock },
+    { data: stripeFees },
+    { data: expenses },
+  ] = await Promise.all([
+    db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'fulfilled', 'shipped', 'out_for_delivery']),
+    db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'shipped', 'out_for_delivery']),
+    db.from('orders').select('total').in('status', ['paid', 'fulfilled', 'shipped', 'out_for_delivery']),
     db.from('product_variants').select('id, sku, color, size, stock, products(name)').lte('stock', 3).gt('stock', 0),
+    db.from('payment_events').select('amount').eq('type', 'stripe_fee'),
+    db.from('expenses').select('amount'),
   ])
 
-  const totalRevenue = revenue?.reduce((sum, o) => sum + (o.total ?? 0), 0) ?? 0
-  return { totalOrders: totalOrders ?? 0, pendingOrders: pendingOrders ?? 0, totalRevenue, lowStock: lowStock ?? [] }
+  const totalRevenue = revenue?.reduce((s, o) => s + (o.total ?? 0), 0) ?? 0
+  const totalStripeFees = stripeFees?.reduce((s, e) => s + e.amount, 0) ?? 0
+  const totalExpenses = expenses?.reduce((s, e) => s + e.amount, 0) ?? 0
+  const netIncome = totalRevenue - totalStripeFees - totalExpenses
+
+  return {
+    totalOrders: totalOrders ?? 0,
+    pendingOrders: pendingOrders ?? 0,
+    totalRevenue,
+    totalStripeFees,
+    totalExpenses,
+    netIncome,
+    lowStock: lowStock ?? [],
+  }
 }
 
 export default async function AdminDashboard() {
-  const { totalOrders, pendingOrders, totalRevenue, lowStock } = await getDashboardStats()
+  const { totalOrders, pendingOrders, totalRevenue, totalStripeFees, totalExpenses, netIncome, lowStock } = await getDashboardStats()
 
-  const stats = [
+  const topStats = [
     { label: 'Total Orders', value: totalOrders, icon: ShoppingBag, color: 'text-purple' },
     { label: 'Awaiting Fulfillment', value: pendingOrders, icon: Package, color: 'text-pink' },
-    { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-sky-600' },
+    { label: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-600' },
+  ]
+
+  const plStats = [
+    { label: 'Expenses', value: `$${totalExpenses.toFixed(2)}`, icon: TrendingDown, color: 'text-orange-500', sub: 'Operating costs' },
+    { label: 'Stripe Fees', value: `$${totalStripeFees.toFixed(2)}`, icon: Minus, color: 'text-red-400', sub: 'Processing fees' },
+    {
+      label: 'Net Income',
+      value: `$${netIncome.toFixed(2)}`,
+      icon: TrendingUp,
+      color: netIncome >= 0 ? 'text-green-600' : 'text-red-500',
+      sub: 'Revenue − expenses − fees',
+      highlight: true,
+      negative: netIncome < 0,
+    },
   ]
 
   return (
     <div>
       <h1 className="text-3xl font-black text-navy mb-8">Dashboard</h1>
 
-      <div className="grid grid-cols-3 gap-5 mb-8">
-        {stats.map((s) => (
+      <div className="grid grid-cols-3 gap-5 mb-5">
+        {topStats.map((s) => (
           <div key={s.label} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-bold text-navy/60">{s.label}</p>
               <s.icon size={20} className={s.color} />
             </div>
             <p className="text-3xl font-black text-navy">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* P&L row */}
+      <div className="grid grid-cols-3 gap-5 mb-8">
+        {plStats.map((s) => (
+          <div
+            key={s.label}
+            className={`rounded-2xl p-6 shadow-sm border ${
+              s.highlight
+                ? s.negative
+                  ? 'bg-red-50 border-red-100'
+                  : 'bg-green-50 border-green-100'
+                : 'bg-white border-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-bold text-navy/60">{s.label}</p>
+              <s.icon size={20} className={s.color} />
+            </div>
+            <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
+            {s.sub && <p className="text-xs text-navy/40 mt-1">{s.sub}</p>}
           </div>
         ))}
       </div>

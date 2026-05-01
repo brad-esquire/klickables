@@ -12,11 +12,18 @@ import { Pencil } from 'lucide-react'
 import PrintLabelButton from '@/components/admin/PrintLabelButton'
 import PrintReceiptButton from '@/components/admin/PrintReceiptButton'
 import PrintBothButton from '@/components/admin/PrintBothButton'
+import ShipButton from '@/components/admin/ShipButton'
+import OutForDeliveryButton from '@/components/admin/OutForDeliveryButton'
+import OrderNotes from '@/components/admin/OrderNotes'
+import FetchStripeFeeButton from '@/components/admin/FetchStripeFeeButton'
+import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   paid: 'pink',
   fulfilled: 'green',
+  shipped: 'green',
+  out_for_delivery: 'green',
   pending: 'navy',
   cancelled: 'red',
 }
@@ -24,6 +31,7 @@ const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
 const eventLabel: Record<string, { label: string; color: string }> = {
   payment_captured: { label: 'Payment captured', color: 'text-green-600' },
   refund_issued:    { label: 'Refund issued',     color: 'text-red-500' },
+  stripe_fee:       { label: 'Stripe processing fee', color: 'text-orange-500' },
 }
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -89,6 +97,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
 
+        {/* Notes */}
+        <OrderNotes orderId={order.id} initialNotes={order.notes} />
+
         {/* Items */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-black text-navy mb-3">Items</h2>
@@ -115,15 +126,22 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         {/* Payment history */}
         {events.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h2 className="font-black text-navy mb-4">Payment History</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-black text-navy">Payment History</h2>
+              {order.stripe_payment_intent_id && !events.some((e) => e.type === 'stripe_fee') && (
+                <FetchStripeFeeButton orderId={order.id} />
+              )}
+            </div>
             <div className="space-y-3">
               {events.map((e) => {
                 const meta = eventLabel[e.type] ?? { label: e.type, color: 'text-navy' }
-                const sign = e.type === 'refund_issued' ? '−' : '+'
+                const isCost = e.type === 'refund_issued' || e.type === 'stripe_fee'
+                const sign = isCost ? '−' : '+'
+                const dotColor = e.type === 'stripe_fee' ? 'bg-orange-400' : isCost ? 'bg-red-400' : 'bg-green-500'
                 return (
                   <div key={e.id} className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${e.type === 'refund_issued' ? 'bg-red-400' : 'bg-green-500'}`} />
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dotColor}`} />
                       <div>
                         <p className={`text-sm font-semibold ${meta.color}`}>{meta.label}</p>
                         {e.note && <p className="text-xs text-navy/50">{e.note}</p>}
@@ -133,7 +151,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`text-sm font-bold ${e.type === 'refund_issued' ? 'text-red-500' : 'text-green-600'}`}>
+                      <p className={`text-sm font-bold ${e.type === 'stripe_fee' ? 'text-orange-500' : isCost ? 'text-red-500' : 'text-green-600'}`}>
                         {sign}${e.amount.toFixed(2)}
                       </p>
                       <p className="text-xs text-navy/40">
@@ -153,12 +171,36 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <FulfillButton orderId={order.id} />
           </div>
         )}
-        {order.status === 'paid' && <FulfillButton orderId={order.id} />}
+        {order.status === 'paid' && (
+          <div className="flex gap-3 flex-wrap">
+            <FulfillButton orderId={order.id} />
+            {order.fulfillment_type === 'shipping' && <ShipButton orderId={order.id} />}
+            {order.fulfillment_type === 'pickup' && <OutForDeliveryButton orderId={order.id} />}
+          </div>
+        )}
 
         {order.fulfilled_at && (
           <p className="text-sm text-green-600 font-semibold">
             ✓ Fulfilled on {new Date(order.fulfilled_at).toLocaleString('en-US')}
           </p>
+        )}
+        {order.shipped_at && (
+          <div className="text-sm text-green-600 font-semibold space-y-1">
+            <p>✓ Shipped on {new Date(order.shipped_at).toLocaleString('en-US')}</p>
+            {order.tracking_number && (
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-navy/60 font-normal">{order.shipping_carrier ?? 'USPS'}: {order.tracking_number}</span>
+                <Link
+                  href={trackingUrl(order.shipping_carrier ?? 'USPS', order.tracking_number)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple font-bold hover:underline text-xs"
+                >
+                  Track →
+                </Link>
+              </div>
+            )}
+          </div>
         )}
 
         {canRefund && (

@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import type { Order, OrderItem } from '@/types'
+import { trackingUrl } from '@/lib/tracking'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
@@ -64,13 +65,7 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
         <!-- Logo -->
         <tr>
           <td align="center" style="padding-bottom:24px;">
-            <table cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;overflow:hidden;">
-              <tr>
-                <td align="center" bgcolor="#1B1E4B" style="background-color:#1B1E4B;padding:16px 24px;border-radius:12px;">
-                  <img src="${LOGO_URL}" width="160" alt="Klickables" style="display:block;" />
-                </td>
-              </tr>
-            </table>
+            <img src="${LOGO_URL}" width="160" alt="Klickables" style="display:block;" />
           </td>
         </tr>
 
@@ -213,4 +208,109 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
         })
       : Promise.resolve(),
   ])
+}
+
+export async function sendShippedNotification(order: Order, trackingNumber: string, carrier = 'USPS') {
+  const orderNum = order.id.slice(0, 8).toUpperCase()
+  const trackLink = trackingUrl(carrier, trackingNumber)
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Klickables order #${orderNum} has shipped!</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f6f6f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f6f6f6;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <!-- Logo -->
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <img src="${LOGO_URL}" width="160" alt="Klickables" style="display:block;" />
+          </td>
+        </tr>
+
+        <!-- Card -->
+        <tr>
+          <td style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+            <!-- Header band -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background:linear-gradient(135deg,#1B1E4B 0%,#9655C8 100%);padding:28px 40px;">
+                  <p style="margin:0;color:rgba(255,255,255,0.75);font-size:13px;text-transform:uppercase;letter-spacing:1.5px;">Your order is on the way!</p>
+                  <h1 style="margin:6px 0 0;color:#ffffff;font-size:26px;font-weight:700;">It's shipped! 📦</h1>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Body -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:32px 40px;">
+                  <p style="margin:0 0 16px;font-size:16px;color:#1B1E4B;">
+                    Hi ${order.customer_name.split(' ')[0]}, great news — your order <strong>#${orderNum}</strong> has shipped!
+                  </p>
+
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f5ff;border-radius:8px;border:1px solid #e9d5ff;">
+                    <tr>
+                      <td style="padding:20px 24px;">
+                        <p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#9655C8;font-weight:700;">${carrier} Tracking Number</p>
+                        <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1B1E4B;letter-spacing:1px;">${trackingNumber}</p>
+                        <a href="${trackLink}" style="display:inline-block;background:#9655C8;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;padding:8px 20px;border-radius:100px;">Track Package →</a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin:24px 0 0;font-size:15px;color:#555;line-height:1.6;">
+                    You can use your tracking number to follow your package's journey. It may take a few hours for tracking to update after shipment.
+                  </p>
+
+                  <p style="margin:16px 0 0;font-size:15px;color:#555;line-height:1.6;">
+                    Shipping to:<br>
+                    <span style="color:#1B1E4B;">
+                      ${order.shipping_address.line1}${order.shipping_address.line2 ? '<br>' + order.shipping_address.line2 : ''}<br>
+                      ${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}
+                    </span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td align="center" style="padding:24px 40px;">
+            <p style="margin:0;font-size:13px;color:#999;">
+              Questions? Email us at
+              <a href="mailto:${FROM}" style="color:#9655C8;text-decoration:none;">${FROM}</a>
+            </p>
+            <p style="margin:8px 0 0;font-size:13px;color:#bbb;">
+              You're receiving this because you made a purchase at
+              <a href="${SITE_URL}" style="color:#9655C8;text-decoration:none;">Klickables</a>,
+              by Kirra, Lorelei, Isla &amp; Ashley.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+
+  const text = `Hi ${order.customer_name.split(' ')[0]},\n\nGreat news — your Klickables order #${orderNum} has shipped!\n\n${carrier} Tracking: ${trackingNumber}\nTrack your package: ${trackLink}\n\nShipping to:\n${order.shipping_address.line1}${order.shipping_address.line2 ? '\n' + order.shipping_address.line2 : ''}\n${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}\n\nIt may take a few hours for tracking to update.\n\nQuestions? Email ${FROM}\n\n— Kirra, Lorelei, Isla & Ashley\nklickables.net`
+
+  await getResend().emails.send({
+    from: FROM,
+    to: order.email,
+    subject: `Your Klickables order #${orderNum} has shipped!`,
+    html,
+    text,
+  })
 }

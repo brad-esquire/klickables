@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase'
+import { sendShippedNotification } from '@/lib/email'
+import { stripe } from '@/lib/stripe'
+import type Stripe from 'stripe'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -18,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const body = await req.json()
   const { customer_name, email, fulfillment_type, shipping_address, pickup_location, status, subtotal, shipping_cost, discount_amount, total, discount_code, line_items } = body
 
-  if (!customer_name || !['pending', 'paid', 'fulfilled', 'cancelled'].includes(status) || total < 0) {
+  if (!customer_name || !['pending', 'paid', 'fulfilled', 'cancelled', 'shipped', 'out_for_delivery'].includes(status) || total < 0) {
     return NextResponse.json({ error: 'Invalid order data' }, { status: 400 })
   }
   if (!line_items?.length) {
@@ -49,11 +52,50 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const { status, paymentNote } = await req.json()
+  const body = await req.json()
+  const { status, paymentNote, trackingNumber, shippingCarrier, notes, action } = body
   const db = createAdminClient()
+
+  if (action === 'fetch_stripe_fee') {
+    const { data: order } = await db.from('orders').select('stripe_payment_intent_id, total').eq('id', id).single()
+    if (!order?.stripe_payment_intent_id) {
+      return NextResponse.json({ error: 'No Stripe payment on this order' }, { status: 400 })
+    }
+    const { data: existing } = await db.from('payment_events').select('id').eq('order_id', id).eq('type', 'stripe_fee').maybeSingle()
+    if (existing) {
+      return NextResponse.json({ error: 'Fee already recorded' }, { status: 409 })
+    }
+    const pi = await stripe.paymentIntents.retrieve(order.stripe_payment_intent_id, {
+      expand: ['latest_charge.balance_transaction'],
+    })
+    const charge = pi.latest_charge as Stripe.Charge
+    const balanceTx = charge?.balance_transaction as Stripe.BalanceTransaction
+    if (!balanceTx || balanceTx.fee <= 0) {
+      return NextResponse.json({ error: 'No fee found on this payment' }, { status: 404 })
+    }
+    const feePercent = ((balanceTx.fee / balanceTx.amount) * 100).toFixed(2)
+    await db.from('payment_events').insert({
+      order_id: id,
+      type: 'stripe_fee',
+      amount: balanceTx.fee / 100,
+      stripe_id: balanceTx.id,
+      note: `${feePercent}% — net $${(balanceTx.net / 100).toFixed(2)}`,
+    })
+    return NextResponse.json({ success: true })
+  }
+
+  if (notes !== undefined) {
+    await db.from('orders').update({ notes: notes || null }).eq('id', id)
+    return NextResponse.json({ success: true })
+  }
 
   const update: Record<string, unknown> = { status }
   if (status === 'fulfilled') update.fulfilled_at = new Date().toISOString()
+  if (status === 'shipped') {
+    update.shipped_at = new Date().toISOString()
+    if (trackingNumber) update.tracking_number = trackingNumber
+    if (shippingCarrier) update.shipping_carrier = shippingCarrier
+  }
 
   await db.from('orders').update(update).eq('id', id)
 
@@ -66,6 +108,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       stripe_id: null,
       note: paymentNote ?? 'Cash',
     })
+  }
+
+  if (status === 'shipped' && trackingNumber) {
+    const { data: order } = await db.from('orders').select('*').eq('id', id).single()
+    if (order) {
+      await sendShippedNotification(order, trackingNumber, shippingCarrier ?? 'USPS').catch(() => {})
+    }
   }
 
   return NextResponse.json({ success: true })

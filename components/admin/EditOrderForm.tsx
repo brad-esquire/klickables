@@ -352,6 +352,8 @@ export default function EditOrderForm({ order }: Props) {
           <option value="pending">Pending</option>
           <option value="paid">Paid</option>
           <option value="fulfilled">Fulfilled</option>
+          <option value="shipped">Shipped</option>
+          <option value="out_for_delivery">Out for Delivery</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
