@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createAdminClient } from '@/lib/supabase'
-import { Package, ShoppingBag, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Package, ShoppingBag, DollarSign, AlertTriangle, TrendingUp } from 'lucide-react'
 
 async function getDashboardStats() {
   const db = createAdminClient()
@@ -22,16 +22,15 @@ async function getDashboardStats() {
   ])
 
   const totalRevenue = revenue?.reduce((s, o) => s + (o.total ?? 0), 0) ?? 0
-  const totalStripeFees = feeEvents?.filter((e) => e.type === 'stripe_fee').reduce((s, e) => s + e.amount, 0) ?? 0
-  const totalPostage = feeEvents?.filter((e) => e.type === 'postage_cost').reduce((s, e) => s + e.amount, 0) ?? 0
-  const totalExpenses = (expenses?.reduce((s, e) => s + e.amount, 0) ?? 0) + totalPostage
-  const netIncome = totalRevenue - totalStripeFees - totalExpenses
+  const totalExpenses =
+    (expenses?.reduce((s, e) => s + e.amount, 0) ?? 0) +
+    (feeEvents?.reduce((s, e) => s + e.amount, 0) ?? 0)
+  const netIncome = totalRevenue - totalExpenses
 
   return {
     totalOrders: totalOrders ?? 0,
     pendingOrders: pendingOrders ?? 0,
     totalRevenue,
-    totalStripeFees,
     totalExpenses,
     netIncome,
     lowStock: lowStock ?? [],
@@ -39,34 +38,22 @@ async function getDashboardStats() {
 }
 
 export default async function AdminDashboard() {
-  const { totalOrders, pendingOrders, totalRevenue, totalStripeFees, totalExpenses, netIncome, lowStock } = await getDashboardStats()
+  const { totalOrders, pendingOrders, totalRevenue, totalExpenses, netIncome, lowStock } = await getDashboardStats()
 
-  const topStats = [
-    { label: 'Total Orders', value: totalOrders, icon: ShoppingBag, color: 'text-purple' },
-    { label: 'Awaiting Fulfillment', value: pendingOrders, icon: Package, color: 'text-pink' },
-    { label: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-600' },
+  const statCards = [
+    { label: 'Total Orders',         value: totalOrders,                    icon: ShoppingBag, color: 'text-purple' },
+    { label: 'Awaiting Fulfillment', value: pendingOrders,                  icon: Package,     color: 'text-pink' },
+    { label: 'Revenue',              value: `$${totalRevenue.toFixed(2)}`,  icon: DollarSign,  color: 'text-green-600' },
   ]
 
-  const plStats = [
-    { label: 'Expenses', value: `$${totalExpenses.toFixed(2)}`, icon: TrendingDown, color: 'text-orange-500', sub: 'Operating costs' },
-    { label: 'Stripe Fees', value: `$${totalStripeFees.toFixed(2)}`, icon: Minus, color: 'text-red-400', sub: 'Processing fees' },
-    {
-      label: 'Net Income',
-      value: `$${netIncome.toFixed(2)}`,
-      icon: TrendingUp,
-      color: netIncome >= 0 ? 'text-green-600' : 'text-red-500',
-      sub: 'Revenue − expenses − fees',
-      highlight: true,
-      negative: netIncome < 0,
-    },
-  ]
+  const isProfit = netIncome >= 0
 
   return (
     <div>
       <h1 className="text-3xl font-black text-navy mb-8">Dashboard</h1>
 
       <div className="grid grid-cols-3 gap-5 mb-5">
-        {topStats.map((s) => (
+        {statCards.map((s) => (
           <div key={s.label} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-bold text-navy/60">{s.label}</p>
@@ -77,27 +64,38 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* P&L row */}
-      <div className="grid grid-cols-3 gap-5 mb-8">
-        {plStats.map((s) => (
-          <div
-            key={s.label}
-            className={`rounded-2xl p-6 shadow-sm border ${
-              s.highlight
-                ? s.negative
-                  ? 'bg-red-50 border-red-100'
-                  : 'bg-green-50 border-green-100'
-                : 'bg-white border-gray-100'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-bold text-navy/60">{s.label}</p>
-              <s.icon size={20} className={s.color} />
-            </div>
-            <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
-            {s.sub && <p className="text-xs text-navy/40 mt-1">{s.sub}</p>}
+      {/* P&L card */}
+      <div className={`rounded-2xl p-6 shadow-sm border mb-8 ${isProfit ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-sm font-bold text-navy/60 uppercase tracking-wide">Profit &amp; Loss</p>
+          <TrendingUp size={20} className={isProfit ? 'text-green-600' : 'text-red-500'} />
+        </div>
+
+        <div className="flex items-center gap-0">
+          {/* Revenue */}
+          <div className="flex-1">
+            <p className="text-xs font-bold text-navy/50 mb-1">Revenue</p>
+            <p className="text-2xl font-black text-navy">${totalRevenue.toFixed(2)}</p>
           </div>
-        ))}
+
+          <div className="text-2xl font-black text-navy/20 px-4">−</div>
+
+          {/* Expenses */}
+          <div className="flex-1">
+            <p className="text-xs font-bold text-navy/50 mb-1">Expenses</p>
+            <p className="text-2xl font-black text-navy">${totalExpenses.toFixed(2)}</p>
+          </div>
+
+          <div className="text-2xl font-black text-navy/20 px-4">=</div>
+
+          {/* Net Income */}
+          <div className="flex-1">
+            <p className="text-xs font-bold text-navy/50 mb-1">Net Income</p>
+            <p className={`text-2xl font-black ${isProfit ? 'text-green-600' : 'text-red-500'}`}>
+              ${netIncome.toFixed(2)}
+            </p>
+          </div>
+        </div>
       </div>
 
       {lowStock.length > 0 && (
