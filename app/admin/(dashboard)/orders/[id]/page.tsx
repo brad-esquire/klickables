@@ -11,6 +11,7 @@ import RefundPanel from '@/components/admin/RefundPanel'
 import { Pencil } from 'lucide-react'
 import PrintLabelButton from '@/components/admin/PrintLabelButton'
 import PrintReceiptButton from '@/components/admin/PrintReceiptButton'
+import PrintBothButton from '@/components/admin/PrintBothButton'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
@@ -39,7 +40,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const canRefund = (order.status === 'paid' || order.status === 'fulfilled') && !!order.stripe_payment_intent_id
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black text-navy">Order #{order.id.slice(0, 8).toUpperCase()}</h1>
@@ -51,6 +52,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <PrintLabelButton order={order} />
           )}
           <PrintReceiptButton order={order} />
+          {order.fulfillment_type === 'shipping' && (
+            <PrintBothButton order={order} />
+          )}
           <Link href={`/admin/orders/${order.id}/edit`}>
             <Button variant="outline" size="sm"><Pencil size={14} className="mr-1.5" />Edit</Button>
           </Link>

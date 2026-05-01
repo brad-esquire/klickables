@@ -16,9 +16,8 @@ export default function PrintLabelButton({ order }: { order: Order }) {
   <title>Shipping Label — #${orderNum}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: white; }
+    html, body { width: 4in; font-family: Arial, sans-serif; background: white; }
     @page { size: 4in 6in; margin: 0; }
-    @media print { body { width: 4in; height: 6in; } }
 
     .label {
       width: 4in;
@@ -28,7 +27,7 @@ export default function PrintLabelButton({ order }: { order: Order }) {
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      margin: 0 auto;
+      margin: 0;
     }
     .header {
       background: #1B1E4B;
