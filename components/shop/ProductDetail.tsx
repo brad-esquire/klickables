@@ -24,7 +24,7 @@ interface ProductDetailProps {
 export default function ProductDetail({ product }: ProductDetailProps) {
   const variants = product.product_variants ?? []
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
-    variants.find((v) => v.stock > 0) ?? variants[0] ?? null
+    variants[0] ?? null
   )
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
@@ -32,10 +32,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const addItem = useCartStore((s) => s.addItem)
 
   const variantLabel = [selectedVariant?.color, selectedVariant?.size].filter(Boolean).join(' / ')
-  const inStock = (selectedVariant?.stock ?? 0) > 0
 
   function handleAddToCart() {
-    if (!selectedVariant || !inStock) return
+    if (!selectedVariant) return
     addItem({
       variantId: selectedVariant.id,
       productId: product.id,
@@ -143,23 +142,18 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               </button>
               <span className="w-8 text-center font-bold text-navy">{qty}</span>
               <button
-                onClick={() => setQty((q) => Math.min(selectedVariant?.stock ?? 99, q + 1))}
+                onClick={() => setQty((q) => q + 1)}
                 className="w-9 h-9 flex items-center justify-center font-bold text-navy hover:bg-navy/10 transition-colors"
               >
                 +
               </button>
             </div>
-            {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 && (
-              <span className="text-orange-500 text-sm font-semibold">
-                Only {selectedVariant.stock} left!
-              </span>
-            )}
           </div>
 
           <Button
             size="lg"
             onClick={handleAddToCart}
-            disabled={!inStock || !selectedVariant}
+            disabled={!selectedVariant}
             className="w-full"
           >
             {!inStock ? 'Out of Stock' : added ? '✓ Added to Cart!' : 'Add to Cart'}

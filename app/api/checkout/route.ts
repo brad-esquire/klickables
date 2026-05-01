@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const variantIds = items.map((i) => i.variantId)
     const { data: variants } = await db
       .from('product_variants')
-      .select('id, price, stock, product_id')
+      .select('id, price, product_id')
       .in('id', variantIds)
 
     if (!variants) return NextResponse.json({ error: 'Could not verify items' }, { status: 400 })
@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
     for (const item of items) {
       const dbVariant = variants.find((v) => v.id === item.variantId)
       if (!dbVariant) return NextResponse.json({ error: `Item not found` }, { status: 400 })
-      if (dbVariant.stock < item.quantity) return NextResponse.json({ error: `Insufficient stock` }, { status: 400 })
       subtotal += dbVariant.price * item.quantity
     }
 
