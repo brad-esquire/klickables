@@ -19,6 +19,7 @@ import FetchStripeFeeButton from '@/components/admin/FetchStripeFeeButton'
 import AddPostageCostButton from '@/components/admin/AddPostageCostButton'
 import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
+import { CUSTOM_CLICKER_COLORS } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   paid: 'pink',
@@ -124,6 +125,45 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
         </div>
+
+        {/* Custom clicker details */}
+        {order.order_items.some((item) => item.customization) && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h2 className="font-black text-navy mb-4">Custom Clicker Details</h2>
+            <div className="space-y-5">
+              {order.order_items.filter((item) => item.customization).map((item) => {
+                const raw = item.customization!
+                const c = typeof raw === 'string' ? JSON.parse(raw) : raw
+                return (
+                  <div key={item.id} className="flex items-start gap-6">
+                    <img
+                      src={c.logoUrl}
+                      alt="Business logo"
+                      className="w-20 h-20 object-contain border border-gray-200 rounded-xl bg-gray-50 p-1 flex-shrink-0"
+                    />
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-navy">{item.product_name} × {item.quantity}</p>
+                      <div>
+                        <p className="text-xs text-navy/50 mb-1.5">Primary Color</p>
+                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-purple bg-purple/5 text-sm font-semibold text-navy">
+                          <span className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: CUSTOM_CLICKER_COLORS.find((col) => col.name === c.color1)?.hex ?? '#ccc' }} />
+                          {c.color1}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-navy/50 mb-1.5">Accent Color</p>
+                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-purple bg-purple/5 text-sm font-semibold text-navy">
+                          <span className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: CUSTOM_CLICKER_COLORS.find((col) => col.name === c.color2)?.hex ?? '#ccc' }} />
+                          {c.color2}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Payment history */}
         {events.length > 0 && (

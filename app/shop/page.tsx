@@ -5,12 +5,24 @@ import ProductCard from '@/components/shop/ProductCard'
 import type { Product } from '@/types'
 
 async function getProducts(): Promise<Product[]> {
-  const { data } = await supabase
-    .from('products')
-    .select('*, product_variants(*)')
-    .eq('active', true)
-    .order('sort_order', { ascending: true })
-  return data ?? []
+  const [activeRes, customRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select('*, product_variants(*)')
+      .eq('active', true)
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('products')
+      .select('*, product_variants(*)')
+      .eq('slug', 'custom-clicker')
+      .single(),
+  ])
+  const products: Product[] = (activeRes.data ?? []) as Product[]
+  const custom = customRes.data as Product | null
+  if (custom && !products.some((p) => p.slug === 'custom-clicker')) {
+    products.push(custom)
+  }
+  return products
 }
 
 export const metadata = {

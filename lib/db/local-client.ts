@@ -35,6 +35,7 @@ const RELATIONS: Record<string, Record<string, RelationDef>> = {
 const JSON_FIELDS: Record<string, string[]> = {
   orders: ['shipping_address'],
   products: ['images'],
+  order_items: ['customization'],
 }
 
 // Fields stored as 0/1 integers that need coercion to boolean

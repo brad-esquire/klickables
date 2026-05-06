@@ -12,13 +12,15 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const image = product.images?.[0]
+  const isCustom = product.slug === 'custom-clicker'
+  const href = isCustom ? '/shop/custom' : `/shop/${product.slug}`
   const lowestPrice = product.product_variants?.length
     ? Math.min(...product.product_variants.map((v) => v.price))
     : null
 
   return (
     <Link
-      href={`/shop/${product.slug}`}
+      href={href}
       className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-100"
     >
       <div className="relative aspect-square bg-cream overflow-hidden">
@@ -36,15 +38,22 @@ export default function ProductCard({ product }: ProductCardProps) {
             🖱️
           </div>
         )}
+        {isCustom && (
+          <span className="absolute top-2.5 left-2.5 bg-purple text-white text-xs font-bold px-2.5 py-1 rounded-full">
+            Custom Order
+          </span>
+        )}
       </div>
       <div className="p-4">
         <h3 className="font-bold text-navy text-lg leading-tight mb-1">{product.name}</h3>
-        {lowestPrice !== null && (
+        {isCustom ? (
+          <p className="text-pink font-bold text-base">From $100.00</p>
+        ) : lowestPrice !== null ? (
           <p className="text-pink font-bold text-base">
             {product.product_variants && product.product_variants.length > 1 ? 'From ' : ''}
             ${lowestPrice.toFixed(2)}
           </p>
-        )}
+        ) : null}
       </div>
     </Link>
   )

@@ -24,7 +24,7 @@ const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
 }
 
 type AggItem = {
-  productId: string
+  productId: string | null
   productName: string
   variantLabel: string
   imageUrl: string
@@ -52,7 +52,7 @@ export default async function ProductionQueuePage() {
         productId: item.product_id,
         productName: item.product_name,
         variantLabel: item.variant_label ?? '',
-        imageUrl: imageMap.get(item.product_id) ?? '',
+        imageUrl: item.product_id ? (imageMap.get(item.product_id) ?? '') : '',
         total: 0,
         confirmed: 0,
       }

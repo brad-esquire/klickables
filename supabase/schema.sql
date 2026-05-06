@@ -53,7 +53,8 @@ CREATE TABLE order_items (
   product_name text NOT NULL,
   variant_label text,
   quantity integer NOT NULL,
-  unit_price numeric(10,2) NOT NULL
+  unit_price numeric(10,2) NOT NULL,
+  customization jsonb
 );
 
 -- Discount codes

@@ -10,8 +10,8 @@ type ProductWithVariants = Product & { product_variants: ProductVariant[] }
 
 interface LineItemRow {
   rowId: string
-  productId: string
-  variantId: string
+  productId: string | null
+  variantId: string | null
   quantity: string
   unitPrice: number
 }
@@ -104,7 +104,7 @@ export default function EditOrderForm({ order }: Props) {
     })
   }
 
-  function handleVariantChange(rowId: string, variantId: string, productId: string) {
+  function handleVariantChange(rowId: string, variantId: string, productId: string | null) {
     const product = products.find((p) => p.id === productId)
     const variant = product?.product_variants.find((v) => v.id === variantId)
     updateRow(rowId, { variantId, unitPrice: variant?.price ?? 0 })
@@ -259,7 +259,7 @@ export default function EditOrderForm({ order }: Props) {
                   <div className="col-span-4">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Product</label>
                     <select
-                      value={row.productId}
+                      value={row.productId ?? ''}
                       onChange={(e) => handleProductChange(row.rowId, e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple"
                     >
@@ -270,7 +270,7 @@ export default function EditOrderForm({ order }: Props) {
                   <div className="col-span-3">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Variant</label>
                     <select
-                      value={row.variantId}
+                      value={row.variantId ?? ''}
                       onChange={(e) => handleVariantChange(row.rowId, e.target.value, row.productId)}
                       disabled={!row.productId}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple disabled:opacity-40"

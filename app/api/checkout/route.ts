@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase'
 import { getShippingCost } from '@/lib/shipping'
 import type { CartItem, ShippingAddress } from '@/types'
 
+const CUSTOM_CLICKER_SENTINEL = 'custom-clicker'
+
 export async function POST(req: NextRequest) {
   try {
     const { items, shippingAddress, discountCode, customerName, email, fulfillmentType, pickupLocation } = await req.json() as {
@@ -37,6 +39,13 @@ export async function POST(req: NextRequest) {
 
     let subtotal = 0
     for (const item of items) {
+      if (item.variantId === CUSTOM_CLICKER_SENTINEL) {
+        if (item.quantity < 50 || item.price !== 2) {
+          return NextResponse.json({ error: 'Invalid custom clicker order' }, { status: 400 })
+        }
+        subtotal += 2 * item.quantity
+        continue
+      }
       const dbVariant = variants.find((v) => v.id === item.variantId)
       if (!dbVariant) return NextResponse.json({ error: `Item not found` }, { status: 400 })
       if (!ignoreStockMap.get(dbVariant.product_id) && dbVariant.stock < item.quantity) {
@@ -63,8 +72,8 @@ export async function POST(req: NextRequest) {
 
     // Strip cart down to only what the webhook needs (image/variantLabel not used server-side)
     // and chunk across multiple metadata keys — Stripe limits each value to 500 chars
-    const compactCart = items.map(({ variantId, productName, price, quantity }) => ({
-      variantId, productName, price, quantity,
+    const compactCart = items.map(({ variantId, productName, price, quantity, customization }) => ({
+      variantId, productName, price, quantity, ...(customization ? { customization } : {}),
     }))
     const cartJson = JSON.stringify(compactCart)
     const CHUNK = 490
