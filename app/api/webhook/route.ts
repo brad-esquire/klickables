@@ -6,6 +6,7 @@ import type Stripe from 'stripe'
 import type { CartItem, ShippingAddress } from '@/types'
 
 export const runtime = 'nodejs'
+export const maxDuration = 25
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
