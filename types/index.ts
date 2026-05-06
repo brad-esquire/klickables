@@ -20,15 +20,34 @@ export interface Product {
   product_variants?: ProductVariant[]
 }
 
+export interface CartItemCustomization {
+  color1: string
+  color2: string
+  logoUrl: string
+}
+
+export const CUSTOM_CLICKER_COLORS = [
+  { name: 'Red',            hex: '#ef4444' },
+  { name: 'Orange',         hex: '#f97316' },
+  { name: 'Yellow',         hex: '#facc15' },
+  { name: 'Green',          hex: '#22c55e' },
+  { name: 'Blue',           hex: '#3b82f6' },
+  { name: 'Black',          hex: '#1a1a1a' },
+  { name: 'White',          hex: '#FFFFFF' },
+  { name: 'Titanium Blue',  hex: '#1B3A6B' },
+  { name: 'Titanium Black', hex: '#2a2a2a' },
+] as const
+
 export interface OrderItem {
   id: string
   order_id: string
-  product_id: string
-  variant_id: string
+  product_id: string | null
+  variant_id: string | null
   product_name: string
   variant_label: string | null
   quantity: number
   unit_price: number
+  customization?: CartItemCustomization | null
 }
 
 export interface ShippingAddress {
@@ -108,6 +127,7 @@ export interface CartItem {
   price: number
   quantity: number
   image: string
+  customization?: CartItemCustomization
 }
 
 export interface SiteSettings {
