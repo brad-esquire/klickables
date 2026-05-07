@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { supabase } from '@/lib/supabase'
 import CustomClickerForm from '@/components/shop/CustomClickerForm'
 import ImageGallery from '@/components/shop/ImageGallery'
