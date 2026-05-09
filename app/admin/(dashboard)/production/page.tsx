@@ -140,7 +140,7 @@ export default async function ProductionQueuePage() {
                             alt={item.productName}
                             width={48}
                             height={48}
-                            className="rounded-lg object-cover bg-cream flex-shrink-0"
+                            className="rounded-lg object-cover bg-cream flex-shrink-0 w-12 h-12"
                           />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0" />
