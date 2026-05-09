@@ -25,23 +25,31 @@ const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
 
 type AggItem = {
   productId: string | null
+  variantId: string | null
   productName: string
   variantLabel: string
   imageUrl: string
   total: number
   confirmed: number
+  stock: number | null
 }
 
 export default async function ProductionQueuePage() {
   const db = createAdminClient()
-  const [orders, productsRes] = await Promise.all([
+  const [orders, productsRes, variantsRes] = await Promise.all([
     getUnfulfilledOrders(),
     db.from('products').select('id, images'),
+    db.from('product_variants').select('id, stock'),
   ])
 
   const imageMap = new Map<string, string>()
   for (const p of productsRes.data ?? []) {
     if (p.images?.[0]) imageMap.set(p.id, p.images[0])
+  }
+
+  const stockMap = new Map<string, number>()
+  for (const v of variantsRes.data ?? []) {
+    stockMap.set(v.id, v.stock)
   }
 
   const map = new Map<string, AggItem>()
@@ -50,11 +58,13 @@ export default async function ProductionQueuePage() {
       const key = `${item.product_id}||${item.variant_label ?? ''}`
       const existing = map.get(key) ?? {
         productId: item.product_id,
+        variantId: item.variant_id,
         productName: item.product_name,
         variantLabel: item.variant_label ?? '',
         imageUrl: item.product_id ? (imageMap.get(item.product_id) ?? '') : '',
         total: 0,
         confirmed: 0,
+        stock: item.variant_id != null ? (stockMap.get(item.variant_id) ?? null) : null,
       }
       existing.total += item.quantity
       if (order.status === 'paid') existing.confirmed += item.quantity
@@ -114,6 +124,7 @@ export default async function ProductionQueuePage() {
                 <tr>
                   <th className="px-5 py-3 text-left">Product</th>
                   <th className="px-5 py-3 text-left">Variant / Color</th>
+                  <th className="px-5 py-3 text-right">In Stock</th>
                   <th className="px-5 py-3 text-right">Paid</th>
                   <th className="px-5 py-3 text-right">Total</th>
                 </tr>
@@ -138,6 +149,9 @@ export default async function ProductionQueuePage() {
                       </div>
                     </td>
                     <td className="px-5 py-3 text-navy/70 text-sm">{item.variantLabel || '—'}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-navy/60">
+                      {item.stock == null ? '—' : item.stock}
+                    </td>
                     <td className="px-5 py-3 text-right font-semibold text-navy/60">{item.confirmed}</td>
                     <td className="px-5 py-3 text-right">
                       <span className="text-2xl font-black text-pink">{item.total}</span>
@@ -145,7 +159,7 @@ export default async function ProductionQueuePage() {
                   </tr>
                 ))}
                 <tr className="bg-gray-50">
-                  <td colSpan={2} className="px-5 py-3 font-black text-navy text-sm uppercase tracking-wide">Total</td>
+                  <td colSpan={3} className="px-5 py-3 font-black text-navy text-sm uppercase tracking-wide">Total</td>
                   <td className="px-5 py-3 text-right font-black text-navy">{confirmedClickers}</td>
                   <td className="px-5 py-3 text-right font-black text-pink text-lg">{totalClickers}</td>
                 </tr>
