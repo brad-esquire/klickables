@@ -4,8 +4,9 @@ import Image from 'next/image'
 import Button from '@/components/ui/Button'
 
 export const metadata: Metadata = {
-  title: 'About Us — Klickables',
-  description: 'Meet Kirra, Lorelei, Isla and Ashley — the four girls behind Klickables 3D Printed Clickers.',
+  title: 'About Us',
+  description: 'Meet Kirra, Lorelei, Isla and Ashley — the four girls behind Klickables 3D printed fidget clickers.',
+  alternates: { canonical: '/about' },
 }
 
 export default function AboutPage() {

@@ -1,8 +1,12 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabase'
 import ProductCard from '@/components/shop/ProductCard'
+import JsonLd from '@/components/seo/JsonLd'
 import type { Product } from '@/types'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 async function getProducts(): Promise<Product[]> {
   const [activeRes, customRes] = await Promise.all([
@@ -25,15 +29,40 @@ async function getProducts(): Promise<Product[]> {
   return products
 }
 
-export const metadata = {
-  title: 'Shop — Klickables',
+export const metadata: Metadata = {
+  title: 'Shop Fidget Clickers',
+  description:
+    'Shop our handcrafted 3D printed fidget clickers — colorful, satisfying, and made by hand. Free shipping on orders over $50.',
+  alternates: { canonical: '/shop' },
+}
+
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Shop', item: `${SITE_URL}/shop` },
+  ],
 }
 
 export default async function ShopPage() {
   const products = await getProducts()
 
+  const itemListLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: products.map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `${SITE_URL}/shop/${p.slug}`,
+      name: p.name,
+    })),
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
+      <JsonLd data={breadcrumbLd} />
+      <JsonLd data={itemListLd} />
       <div className="mb-10">
         <h1 className="text-4xl font-black text-navy mb-2">Shop Clickers</h1>
         <p className="text-navy/60">Pick your colors, grab your favorite — all 3D printed just for you.</p>

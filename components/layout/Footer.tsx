@@ -19,6 +19,7 @@ export default function Footer() {
           <h3 className="font-bold mb-3 text-pink">Quick Links</h3>
           <ul className="space-y-2 text-sm text-white/70">
             <li><Link href="/shop" className="hover:text-white transition-colors">Shop</Link></li>
+            <li><Link href="/fidget-clickers-anxiety-adhd" className="hover:text-white transition-colors">Why Clickers</Link></li>
             <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
             <li><Link href="/cart" className="hover:text-white transition-colors">Cart</Link></li>
           </ul>

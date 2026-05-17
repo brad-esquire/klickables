@@ -1,11 +1,19 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import ProductCard from '@/components/shop/ProductCard'
 import Button from '@/components/ui/Button'
 import type { Product } from '@/types'
+
+export const metadata: Metadata = {
+  title: { absolute: 'Klickables — 3D Printed Fidget Clickers' },
+  description:
+    'Satisfying, colorful 3D printed fidget clickers handcrafted by Kirra, Lorelei, Isla & Ashley. Great for focus, stress relief, anxiety, and ADHD.',
+  alternates: { canonical: '/' },
+}
 
 async function getFeaturedProducts(): Promise<Product[]> {
   const { data } = await supabase
