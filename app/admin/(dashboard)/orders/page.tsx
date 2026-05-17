@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
+import { SALES_REPS } from '@/types'
 import type { Order } from '@/types'
 
 async function getOrders(): Promise<Order[]> {
@@ -16,6 +17,8 @@ async function getOrders(): Promise<Order[]> {
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   paid: 'pink',
   fulfilled: 'green',
+  shipped: 'green',
+  out_for_delivery: 'green',
   pending: 'navy',
   cancelled: 'red',
 }
@@ -46,6 +49,7 @@ export default async function AdminOrdersPage() {
                 <th className="px-5 py-3 text-left">Customer</th>
                 <th className="px-5 py-3 text-left">Total</th>
                 <th className="px-5 py-3 text-left">Status</th>
+                <th className="px-5 py-3 text-left">Sales Rep</th>
                 <th className="px-5 py-3 text-left">Date</th>
                 <th className="px-5 py-3"></th>
               </tr>
@@ -61,6 +65,11 @@ export default async function AdminOrdersPage() {
                   <td className="px-5 py-4 font-bold text-navy">${order.total?.toFixed(2)}</td>
                   <td className="px-5 py-4">
                     <Badge variant={statusVariant[order.status] ?? 'navy'}>{order.status}</Badge>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-navy/70">
+                    {order.sales_reps && order.sales_reps.length > 0
+                      ? order.sales_reps.map((r) => SALES_REPS.find((sr) => sr.value === r)?.label ?? r).join(', ')
+                      : <span className="text-navy/30">—</span>}
                   </td>
                   <td className="px-5 py-4 text-sm text-navy/60">
                     {new Date(order.created_at).toLocaleDateString('en-US')}

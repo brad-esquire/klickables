@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
-import type { Order, OrderItem, Product, ProductVariant } from '@/types'
+import { PAYMENT_METHODS, SALES_REPS } from '@/types'
+import type { CartItemCustomization, Order, OrderItem, PaymentMethod, Product, ProductVariant, SalesRep } from '@/types'
 
 type ProductWithVariants = Product & { product_variants: ProductVariant[] }
 
@@ -14,6 +15,10 @@ interface LineItemRow {
   variantId: string | null
   quantity: string
   unitPrice: number
+  isCustom: boolean
+  productName: string
+  variantLabel: string | null
+  customization: CartItemCustomization | null
 }
 
 function getVariantLabel(v: ProductVariant): string {
@@ -46,18 +51,31 @@ export default function EditOrderForm({ order }: Props) {
   const [country, setCountry] = useState(addr.country ?? '')
   const [pickupLocation, setPickupLocation] = useState(order.pickup_location ?? '')
   const [lineItems, setLineItems] = useState<LineItemRow[]>(
-    order.order_items.map((item) => ({
-      rowId: item.id,
-      productId: item.product_id,
-      variantId: item.variant_id,
-      quantity: String(item.quantity),
-      unitPrice: item.unit_price,
-    }))
+    order.order_items.map((item) => {
+      const customization = typeof item.customization === 'string'
+        ? JSON.parse(item.customization)
+        : (item.customization ?? null)
+      const isCustom = !!customization || (item.product_id == null && item.product_name === 'Custom Clicker')
+      return {
+        rowId: item.id,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        quantity: String(item.quantity),
+        unitPrice: item.unit_price,
+        isCustom,
+        productName: item.product_name,
+        variantLabel: item.variant_label,
+        customization,
+      }
+    })
   )
   const [shippingCost, setShippingCost] = useState(String(order.shipping_cost ?? 0))
   const [discountAmount, setDiscountAmount] = useState(String(order.discount_amount ?? 0))
   const [discountCode, setDiscountCode] = useState(order.discount_code ?? '')
   const [status, setStatus] = useState(order.status)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>(order.payment_method ?? '')
+  const [paymentMethodOther, setPaymentMethodOther] = useState(order.payment_method_other ?? '')
+  const [salesReps, setSalesReps] = useState<SalesRep[]>(order.sales_reps ?? [])
   const [totalInput, setTotalInput] = useState(String(order.total ?? 0))
   const [totalManuallyEdited, setTotalManuallyEdited] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -82,7 +100,11 @@ export default function EditOrderForm({ order }: Props) {
   const total = parseFloat(totalInput) || 0
 
   function addRow() {
-    setLineItems((rows) => [...rows, { rowId: crypto.randomUUID(), productId: '', variantId: '', quantity: '1', unitPrice: 0 }])
+    setLineItems((rows) => [...rows, {
+      rowId: crypto.randomUUID(), productId: '', variantId: '',
+      quantity: '1', unitPrice: 0,
+      isCustom: false, productName: '', variantLabel: null, customization: null,
+    }])
   }
 
   function removeRow(rowId: string) {
@@ -116,7 +138,7 @@ export default function EditOrderForm({ order }: Props) {
 
     if (!customerName.trim()) { setError('Customer name is required'); return }
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Please enter a valid email address'); return }
-    const validItems = lineItems.filter((r) => r.productId && r.variantId && parseInt(r.quantity) >= 1)
+    const validItems = lineItems.filter((r) => (r.isCustom || (r.productId && r.variantId)) && parseInt(r.quantity) >= 1)
     if (!validItems.length) { setError('Please add at least one item with a product and variant selected'); return }
     if (fulfillmentType === 'shipping' && (!line1.trim() || !city.trim() || !state.trim() || !postalCode.trim() || !country.trim())) {
       setError('Please fill in all required shipping address fields'); return
@@ -132,6 +154,17 @@ export default function EditOrderForm({ order }: Props) {
       : { line1: '', city: '', state: '', postal_code: '', country: '' }
 
     const line_items = validItems.map((row) => {
+      if (row.isCustom) {
+        return {
+          product_id: null,
+          variant_id: null,
+          product_name: row.productName || 'Custom Clicker',
+          variant_label: row.variantLabel,
+          customization: row.customization,
+          quantity: parseInt(row.quantity),
+          unit_price: row.unitPrice,
+        }
+      }
       const product = products.find((p) => p.id === row.productId)
       const variant = product?.product_variants.find((v) => v.id === row.variantId)
       return {
@@ -159,6 +192,9 @@ export default function EditOrderForm({ order }: Props) {
         discount_amount: discountNum,
         total,
         discount_code: discountCode.trim() || null,
+        payment_method: paymentMethod || null,
+        payment_method_other: paymentMethod === 'other' ? (paymentMethodOther.trim() || null) : null,
+        sales_reps: salesReps,
         line_items,
       }),
     })
@@ -166,6 +202,7 @@ export default function EditOrderForm({ order }: Props) {
     const data = await res.json()
     if (!res.ok) { setError(data.error ?? 'Failed to save order'); setSubmitting(false); return }
     router.push(`/admin/orders/${order.id}`)
+    router.refresh()
   }
 
   const pillBase = 'px-4 py-2 rounded-full text-sm font-bold transition-colors'
@@ -256,31 +293,46 @@ export default function EditOrderForm({ order }: Props) {
               const lineTotal = row.unitPrice * (parseInt(row.quantity) || 0)
               return (
                 <div key={row.rowId} className="grid grid-cols-12 gap-2 items-end border border-gray-100 rounded-xl p-3">
-                  <div className="col-span-4">
-                    <label className="block text-xs font-bold text-navy/60 mb-1">Product</label>
-                    <select
-                      value={row.productId ?? ''}
-                      onChange={(e) => handleProductChange(row.rowId, e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple"
-                    >
-                      <option value="">Select…</option>
-                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-span-3">
-                    <label className="block text-xs font-bold text-navy/60 mb-1">Variant</label>
-                    <select
-                      value={row.variantId ?? ''}
-                      onChange={(e) => handleVariantChange(row.rowId, e.target.value, row.productId)}
-                      disabled={!row.productId}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple disabled:opacity-40"
-                    >
-                      <option value="">Select…</option>
-                      {variants.map((v) => (
-                        <option key={v.id} value={v.id}>{getVariantLabel(v) || `$${v.price.toFixed(2)}`}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {row.isCustom ? (
+                    <>
+                      <div className="col-span-4">
+                        <label className="block text-xs font-bold text-navy/60 mb-1">Product</label>
+                        <p className="text-sm font-semibold text-navy px-3 py-2">{row.productName || 'Custom Clicker'}</p>
+                      </div>
+                      <div className="col-span-3">
+                        <label className="block text-xs font-bold text-navy/60 mb-1">Variant</label>
+                        <p className="text-sm text-navy/70 px-3 py-2">{row.variantLabel ?? '—'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="col-span-4">
+                        <label className="block text-xs font-bold text-navy/60 mb-1">Product</label>
+                        <select
+                          value={row.productId ?? ''}
+                          onChange={(e) => handleProductChange(row.rowId, e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple"
+                        >
+                          <option value="">Select…</option>
+                          {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-3">
+                        <label className="block text-xs font-bold text-navy/60 mb-1">Variant</label>
+                        <select
+                          value={row.variantId ?? ''}
+                          onChange={(e) => handleVariantChange(row.rowId, e.target.value, row.productId)}
+                          disabled={!row.productId}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple disabled:opacity-40"
+                        >
+                          <option value="">Select…</option>
+                          {variants.map((v) => (
+                            <option key={v.id} value={v.id}>{getVariantLabel(v) || `$${v.price.toFixed(2)}`}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
                   <div className="col-span-2">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Qty</label>
                     <input
@@ -341,6 +393,44 @@ export default function EditOrderForm({ order }: Props) {
             onChange={(e) => { setTotalInput(e.target.value); setTotalManuallyEdited(true) }}
             className="w-32 border-2 border-gray-200 rounded-xl px-3 py-1.5 text-right font-black text-pink text-lg focus:outline-none focus:border-purple"
           />
+        </div>
+      </div>
+
+      {/* Attribution */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
+        <h2 className="font-black text-navy">Attribution</h2>
+        <div>
+          <label className={labelCls}>Payment Method</label>
+          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod | '')} className={inputCls}>
+            <option value="">Select…</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+        {paymentMethod === 'other' && (
+          <div>
+            <label className={labelCls}>Method Name</label>
+            <input value={paymentMethodOther} onChange={(e) => setPaymentMethodOther(e.target.value)} className={inputCls} placeholder="e.g. Bank transfer, Cheque" />
+          </div>
+        )}
+        <div>
+          <label className={labelCls}>Sales Rep <span className="font-normal text-navy/40">(select one or more — sales split evenly)</span></label>
+          <div className="flex flex-wrap gap-2">
+            {SALES_REPS.map((rep) => {
+              const active = salesReps.includes(rep.value)
+              return (
+                <button
+                  type="button"
+                  key={rep.value}
+                  onClick={() => setSalesReps((reps) => active ? reps.filter((r) => r !== rep.value) : [...reps, rep.value])}
+                  className={`${pillBase} ${active ? pillActive : pillInactive}`}
+                >
+                  {rep.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

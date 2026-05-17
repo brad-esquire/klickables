@@ -19,7 +19,7 @@ import FetchStripeFeeButton from '@/components/admin/FetchStripeFeeButton'
 import AddPostageCostButton from '@/components/admin/AddPostageCostButton'
 import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
-import { CUSTOM_CLICKER_COLORS } from '@/types'
+import { CUSTOM_CLICKER_COLORS, PAYMENT_METHODS, SALES_REPS } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   paid: 'pink',
@@ -98,6 +98,36 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               </p>
             </>
           )}
+        </div>
+
+        {/* Attribution */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-black text-navy">Attribution</h2>
+            <Link href={`/admin/orders/${order.id}/edit`} className="text-purple font-bold text-xs hover:text-pink transition-colors">
+              Edit →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">Payment Method</p>
+              <p className="text-navy font-semibold">
+                {order.payment_method === 'other'
+                  ? (order.payment_method_other || 'Other')
+                  : (PAYMENT_METHODS.find((m) => m.value === order.payment_method)?.label ?? <span className="text-navy/40 font-normal">— not set —</span>)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">
+                Sales Rep{order.sales_reps && order.sales_reps.length > 1 ? `s (split ${(100 / order.sales_reps.length).toFixed(0)}% each)` : ''}
+              </p>
+              <p className="text-navy font-semibold">
+                {order.sales_reps && order.sales_reps.length > 0
+                  ? order.sales_reps.map((r) => SALES_REPS.find((sr) => sr.value === r)?.label ?? r).join(', ')
+                  : <span className="text-navy/40 font-normal">— not set —</span>}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Notes */}

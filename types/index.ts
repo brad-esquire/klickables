@@ -62,6 +62,26 @@ export interface ShippingAddress {
 export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'shipped' | 'out_for_delivery'
 export type FulfillmentType = 'shipping' | 'pickup'
 
+export type PaymentMethod = 'stripe' | 'cash' | 'venmo' | 'paypal' | 'zelle' | 'other'
+
+export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: 'stripe', label: 'Credit Card (Stripe)' },
+  { value: 'cash',   label: 'Cash' },
+  { value: 'venmo',  label: 'Venmo' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'zelle',  label: 'Zelle' },
+  { value: 'other',  label: 'Other' },
+]
+
+export type SalesRep = 'kirra' | 'lorelei' | 'isla' | 'ashley' | 'website'
+
+export const SALES_REPS: { value: SalesRep; label: string }[] = [
+  { value: 'kirra',   label: 'Kirra' },
+  { value: 'lorelei', label: 'Lorelei' },
+  { value: 'isla',    label: 'Isla' },
+  { value: 'ashley',  label: 'Ashley' },
+  { value: 'website', label: 'Website' },
+]
 
 export interface Order {
   id: string
@@ -77,6 +97,9 @@ export interface Order {
   discount_amount: number
   total: number
   discount_code: string | null
+  payment_method: PaymentMethod | null
+  payment_method_other: string | null
+  sales_reps: SalesRep[]
   created_at: string
   notes: string | null
   fulfilled_at: string | null

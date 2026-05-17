@@ -33,7 +33,7 @@ const RELATIONS: Record<string, Record<string, RelationDef>> = {
 
 // Fields stored as JSON text that need parsing on read
 const JSON_FIELDS: Record<string, string[]> = {
-  orders: ['shipping_address'],
+  orders: ['shipping_address', 'sales_reps'],
   products: ['images'],
   order_items: ['customization'],
 }

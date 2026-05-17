@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
-import type { Product, ProductVariant } from '@/types'
+import { PAYMENT_METHODS, SALES_REPS } from '@/types'
+import type { PaymentMethod, Product, ProductVariant, SalesRep } from '@/types'
 
 type ProductWithVariants = Product & { product_variants: ProductVariant[] }
 
@@ -48,7 +49,10 @@ export default function CreateOrderForm() {
   const [discountAmount, setDiscountAmount] = useState('0')
   const [discountCode, setDiscountCode] = useState('')
   const [status, setStatus] = useState<'pending' | 'paid'>('pending')
-  const [paymentNote, setPaymentNote] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
+
+  const [paymentMethodOther, setPaymentMethodOther] = useState('')
+  const [salesReps, setSalesReps] = useState<SalesRep[]>([])
   const [totalInput, setTotalInput] = useState('0')
   const [totalManuallyEdited, setTotalManuallyEdited] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -152,7 +156,9 @@ export default function CreateOrderForm() {
         discount_amount: discountNum,
         total,
         discount_code: discountCode.trim() || null,
-        payment_note: paymentNote.trim() || null,
+        payment_method: paymentMethod || null,
+        payment_method_other: paymentMethod === 'other' ? (paymentMethodOther.trim() || null) : null,
+        sales_reps: salesReps,
         line_items,
       }),
     })
@@ -338,6 +344,44 @@ export default function CreateOrderForm() {
         </div>
       </div>
 
+      {/* Attribution */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
+        <h2 className="font-black text-navy">Attribution</h2>
+        <div>
+          <label className={labelCls}>Payment Method</label>
+          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod | '')} className={inputCls}>
+            <option value="">Select…</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+        {paymentMethod === 'other' && (
+          <div>
+            <label className={labelCls}>Method Name</label>
+            <input value={paymentMethodOther} onChange={(e) => setPaymentMethodOther(e.target.value)} className={inputCls} placeholder="e.g. Bank transfer, Cheque" />
+          </div>
+        )}
+        <div>
+          <label className={labelCls}>Sales Rep <span className="font-normal text-navy/40">(select one or more — sales split evenly)</span></label>
+          <div className="flex flex-wrap gap-2">
+            {SALES_REPS.map((rep) => {
+              const active = salesReps.includes(rep.value)
+              return (
+                <button
+                  type="button"
+                  key={rep.value}
+                  onClick={() => setSalesReps((reps) => active ? reps.filter((r) => r !== rep.value) : [...reps, rep.value])}
+                  className={`${pillBase} ${active ? pillActive : pillInactive}`}
+                >
+                  {rep.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Status */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
         <h2 className="font-black text-navy">Status</h2>
@@ -348,12 +392,6 @@ export default function CreateOrderForm() {
             <option value="paid">Paid</option>
           </select>
         </div>
-        {status === 'paid' && (
-          <div>
-            <label className={labelCls}>Payment Note <span className="font-normal text-navy/40">(optional)</span></label>
-            <input value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} className={inputCls} placeholder="e.g. Cash, Bank transfer, Cheque" />
-          </div>
-        )}
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}

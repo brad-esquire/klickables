@@ -19,7 +19,18 @@ export async function POST(req: NextRequest) {
     customer_name, email, fulfillment_type, shipping_address, pickup_location,
     status, subtotal, shipping_cost, discount_amount, total,
     discount_code, payment_note, line_items,
+    payment_method, payment_method_other, sales_reps,
   } = body
+
+  const VALID_PAYMENT_METHODS = ['stripe', 'cash', 'venmo', 'paypal', 'zelle', 'other']
+  const VALID_SALES_REPS = ['kirra', 'lorelei', 'isla', 'ashley', 'website']
+
+  if (payment_method != null && !VALID_PAYMENT_METHODS.includes(payment_method)) {
+    return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
+  }
+  if (sales_reps != null && (!Array.isArray(sales_reps) || sales_reps.some((r: unknown) => typeof r !== 'string' || !VALID_SALES_REPS.includes(r)))) {
+    return NextResponse.json({ error: 'Invalid sales reps' }, { status: 400 })
+  }
 
   // Server-side validation
   if (!customer_name?.trim()) {
@@ -56,6 +67,9 @@ export async function POST(req: NextRequest) {
     discount_amount,
     total,
     discount_code: discount_code || null,
+    payment_method: payment_method ?? null,
+    payment_method_other: payment_method === 'other' ? (payment_method_other?.trim() || null) : null,
+    sales_reps: Array.isArray(sales_reps) ? sales_reps : [],
   }).select().single()
 
   if (orderError || !order) {
@@ -82,12 +96,19 @@ export async function POST(req: NextRequest) {
 
   // Record payment event if paid
   if (status === 'paid') {
+    const methodLabel: Record<string, string> = {
+      stripe: 'Credit Card (Stripe)', cash: 'Cash', venmo: 'Venmo',
+      paypal: 'PayPal', zelle: 'Zelle',
+    }
+    const note = payment_method === 'other'
+      ? (payment_method_other?.trim() || 'Other')
+      : (payment_method ? methodLabel[payment_method] ?? null : (payment_note || null))
     await db.from('payment_events').insert({
       order_id: order.id,
       type: 'payment_captured',
       amount: total,
       stripe_id: null,
-      note: payment_note || null,
+      note,
     })
   }
 

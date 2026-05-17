@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS orders (
   discount_amount REAL DEFAULT 0,
   total REAL,
   discount_code TEXT,
+  payment_method TEXT,
+  payment_method_other TEXT,
+  sales_reps TEXT NOT NULL DEFAULT '[]',
   created_at TEXT DEFAULT (datetime('now')),
   fulfilled_at TEXT
 );

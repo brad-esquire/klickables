@@ -19,13 +19,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
   const body = await req.json()
-  const { customer_name, email, fulfillment_type, shipping_address, pickup_location, status, subtotal, shipping_cost, discount_amount, total, discount_code, line_items } = body
+  const { customer_name, email, fulfillment_type, shipping_address, pickup_location, status, subtotal, shipping_cost, discount_amount, total, discount_code, line_items, payment_method, payment_method_other, sales_reps } = body
 
   if (!customer_name || !['pending', 'paid', 'fulfilled', 'cancelled', 'shipped', 'out_for_delivery'].includes(status) || total < 0) {
     return NextResponse.json({ error: 'Invalid order data' }, { status: 400 })
   }
   if (!line_items?.length) {
     return NextResponse.json({ error: 'At least one line item is required' }, { status: 400 })
+  }
+
+  const VALID_PAYMENT_METHODS = ['stripe', 'cash', 'venmo', 'paypal', 'zelle', 'other']
+  const VALID_SALES_REPS = ['kirra', 'lorelei', 'isla', 'ashley', 'website']
+  if (payment_method != null && payment_method !== '' && !VALID_PAYMENT_METHODS.includes(payment_method)) {
+    return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
+  }
+  if (sales_reps != null && (!Array.isArray(sales_reps) || sales_reps.some((r: unknown) => typeof r !== 'string' || !VALID_SALES_REPS.includes(r)))) {
+    return NextResponse.json({ error: 'Invalid sales reps' }, { status: 400 })
   }
 
   const db = createAdminClient()
@@ -35,6 +44,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     pickup_location: pickup_location ?? null, status,
     subtotal, shipping_cost, discount_amount, total,
     discount_code: discount_code ?? null,
+    payment_method: payment_method || null,
+    payment_method_other: payment_method === 'other' ? (payment_method_other?.trim() || null) : null,
+    sales_reps: Array.isArray(sales_reps) ? sales_reps : [],
   }
   if (status === 'fulfilled') orderUpdate.fulfilled_at = new Date().toISOString()
 

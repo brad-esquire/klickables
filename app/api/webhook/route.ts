@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
     discount_amount: parseFloat(meta.discountAmount),
     total: pi.amount / 100,
     discount_code: meta.discountCode || null,
+    payment_method: 'stripe',
+    sales_reps: ['website'],
   }).select().single()
 
   if (!order) return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
