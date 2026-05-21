@@ -58,6 +58,7 @@ interface PaymentEventRow {
   type: string
   amount: number
   note: string | null
+  paid_from_account_id: string | null
   created_at: string
 }
 
@@ -82,7 +83,7 @@ export async function syncOrderTransactions(orderId: string): Promise<void> {
     return
   }
 
-  const { data: eventsData } = await db.from('payment_events').select('id, type, amount, note, created_at').eq('order_id', orderId)
+  const { data: eventsData } = await db.from('payment_events').select('id, type, amount, note, paid_from_account_id, created_at').eq('order_id', orderId)
   const events = (eventsData ?? []) as PaymentEventRow[]
 
   // Wipe all non-manual rows for this order so the rebuild is clean.
@@ -127,33 +128,35 @@ export async function syncOrderTransactions(orderId: string): Promise<void> {
     }
   }
 
-  // Stripe-related outflows (stripe_fee, postage_cost, refund_issued) — these come out of Stripe.
-  const stripeEvents = events.filter((e) => e.type === 'stripe_fee' || e.type === 'postage_cost' || e.type === 'refund_issued')
-  if (stripeEvents.length > 0) {
+  // Outflows tied to payment_events (stripe_fee, postage_cost, refund_issued).
+  // Default source is Stripe, but each event can override via paid_from_account_id —
+  // e.g. someone paid US postage out of pocket and is owed reimbursement.
+  const outflowEvents = events.filter((e) => e.type === 'stripe_fee' || e.type === 'postage_cost' || e.type === 'refund_issued')
+  if (outflowEvents.length > 0) {
     const stripe = await findAccount(db, { name: 'Stripe' })
-    if (stripe) {
-      for (const ev of stripeEvents) {
-        const amount = Number(ev.amount)
-        if (!amount || amount <= 0) continue
-        let description: string
-        if (ev.type === 'postage_cost') {
-          description = `${ev.note ?? 'Postage'} — Order #${shortOrderId(orderId)}`
-        } else if (ev.type === 'refund_issued') {
-          description = `Refund — Order #${shortOrderId(orderId)}`
-        } else {
-          description = `Stripe fee — Order #${shortOrderId(orderId)}`
-        }
-        await db.from('money_transactions').insert({
-          occurred_at:      ev.created_at.slice(0, 10),
-          kind:             'expense',
-          from_account_id:  stripe.id,
-          to_account_id:    null,
-          amount,
-          order_id:         orderId,
-          payment_event_id: ev.id,
-          description,
-        })
+    for (const ev of outflowEvents) {
+      const amount = Number(ev.amount)
+      if (!amount || amount <= 0) continue
+      const fromId = ev.paid_from_account_id ?? stripe?.id
+      if (!fromId) continue
+      let description: string
+      if (ev.type === 'postage_cost') {
+        description = `${ev.note ?? 'Postage'} — Order #${shortOrderId(orderId)}`
+      } else if (ev.type === 'refund_issued') {
+        description = `Refund — Order #${shortOrderId(orderId)}`
+      } else {
+        description = `Stripe fee — Order #${shortOrderId(orderId)}`
       }
+      await db.from('money_transactions').insert({
+        occurred_at:      ev.created_at.slice(0, 10),
+        kind:             'expense',
+        from_account_id:  fromId,
+        to_account_id:    null,
+        amount,
+        order_id:         orderId,
+        payment_event_id: ev.id,
+        description,
+      })
     }
   }
 }

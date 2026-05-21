@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS payment_events (
   amount REAL NOT NULL,
   stripe_id TEXT,
   note TEXT,
+  paid_from_account_id TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

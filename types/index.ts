@@ -178,6 +178,7 @@ export interface PaymentEvent {
   amount: number
   stripe_id: string | null
   note: string | null
+  paid_from_account_id: string | null
   created_at: string
 }
 

@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const db = createAdminClient()
 
   if (action === 'add_postage') {
-    const { postageCost, shippingCarrier } = body
+    const { postageCost, shippingCarrier, paidFromAccountId } = body
     if (!postageCost || postageCost <= 0) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
     }
@@ -88,6 +88,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       amount: postageCost,
       stripe_id: null,
       note: shippingCarrier ?? 'USPS',
+      paid_from_account_id: paidFromAccountId || null,
     })
     await syncOrderTransactions(id)
     return NextResponse.json({ success: true })

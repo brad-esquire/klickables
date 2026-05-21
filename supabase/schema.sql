@@ -82,6 +82,7 @@ CREATE TABLE payment_events (
   amount numeric(10,2) NOT NULL,
   stripe_id text,
   note text,
+  paid_from_account_id uuid,
   created_at timestamptz DEFAULT now()
 );
 

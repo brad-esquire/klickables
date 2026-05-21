@@ -16,7 +16,7 @@ import ShipButton from '@/components/admin/ShipButton'
 import OutForDeliveryButton from '@/components/admin/OutForDeliveryButton'
 import OrderNotes from '@/components/admin/OrderNotes'
 import FetchStripeFeeButton from '@/components/admin/FetchStripeFeeButton'
-import AddPostageCostButton from '@/components/admin/AddPostageCostButton'
+import PostageEntryButton from '@/components/admin/PostageEntryButton'
 import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 import { CUSTOM_CLICKER_COLORS, PAYMENT_METHODS, SALES_REPS } from '@/types'
@@ -202,7 +202,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <h2 className="font-black text-navy">Payment History</h2>
               <div className="flex items-center gap-4">
                 {order.status === 'shipped' && !events.some((e) => e.type === 'postage_cost') && (
-                  <AddPostageCostButton orderId={order.id} carrier={order.shipping_carrier} />
+                  <PostageEntryButton orderId={order.id} defaultCarrier={order.shipping_carrier} />
                 )}
                 {order.stripe_payment_intent_id && !events.some((e) => e.type === 'stripe_fee') && (
                   <FetchStripeFeeButton orderId={order.id} />
@@ -228,9 +228,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`text-sm font-bold ${e.type === 'stripe_fee' || e.type === 'postage_cost' ? 'text-orange-500' : isCost ? 'text-red-500' : 'text-green-600'}`}>
-                        {sign}${e.amount.toFixed(2)}
-                      </p>
+                      <div className="flex items-center gap-2 justify-end">
+                        <p className={`text-sm font-bold ${e.type === 'stripe_fee' || e.type === 'postage_cost' ? 'text-orange-500' : isCost ? 'text-red-500' : 'text-green-600'}`}>
+                          {sign}${e.amount.toFixed(2)}
+                        </p>
+                        {e.type === 'postage_cost' && (
+                          <PostageEntryButton orderId={order.id} event={e} />
+                        )}
+                      </div>
                       <p className="text-xs text-navy/40">
                         {new Date(e.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
                       </p>
