@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Package, Pencil, Trash2 } from 'lucide-react'
+import { Package, Pencil, X, Trash2 } from 'lucide-react'
+import Button from '@/components/ui/Button'
 import type { MoneyAccount, PaymentEvent } from '@/types'
 
 type Carrier = 'USPS' | 'UPS' | 'FedEx'
 const CARRIERS: Carrier[] = ['USPS', 'UPS', 'FedEx']
+
+const inputCls = 'w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple text-sm'
+const labelCls = 'block text-sm font-bold text-navy mb-1.5'
 
 interface Props {
   orderId: string
@@ -37,6 +41,14 @@ export default function PostageEntryButton({ orderId, event, defaultCarrier }: P
       .then((data) => setAccounts((data ?? []).filter((a: MoneyAccount) => !a.archived)))
       .catch(() => setAccounts([]))
   }, [open])
+
+  function handleOpen() {
+    setAmount(event ? event.amount.toFixed(2) : '')
+    setCarrier(((event?.note ?? defaultCarrier) as Carrier) ?? 'USPS')
+    setPaidFrom(event?.paid_from_account_id ?? '')
+    setError('')
+    setOpen(true)
+  }
 
   async function handleSave() {
     const cost = parseFloat(amount)
@@ -73,86 +85,96 @@ export default function PostageEntryButton({ orderId, event, defaultCarrier }: P
     else { setError('Failed to delete.') }
   }
 
-  if (!open) {
-    if (isEdit) {
-      return (
+  return (
+    <>
+      {isEdit ? (
         <button
-          onClick={() => setOpen(true)}
-          className="p-1 text-navy/40 hover:text-navy transition-colors cursor-pointer rounded hover:bg-gray-100"
+          onClick={handleOpen}
+          className="p-1.5 text-navy/40 hover:text-navy transition-colors cursor-pointer rounded-lg hover:bg-gray-100"
           title="Edit postage"
         >
-          <Pencil size={12} />
+          <Pencil size={14} />
         </button>
-      )
-    }
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs font-bold text-navy/50 hover:text-purple transition-colors cursor-pointer"
-      >
-        <Package size={13} />
-        Add postage cost
-      </button>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-2 flex-wrap bg-gray-50 rounded-lg p-2 -m-2">
-      <select
-        value={carrier}
-        onChange={(e) => setCarrier(e.target.value as Carrier)}
-        className="border-2 border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-purple text-navy bg-white"
-      >
-        {CARRIERS.map((c) => <option key={c} value={c}>{c}</option>)}
-      </select>
-      <div className="relative">
-        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-navy/40 text-xs font-bold">$</span>
-        <input
-          type="number"
-          min="0.01"
-          step="0.01"
-          value={amount}
-          onChange={(e) => { setAmount(e.target.value); setError('') }}
-          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-          placeholder="0.00"
-          autoFocus
-          className="border-2 border-gray-200 rounded-lg pl-6 pr-3 py-1 text-xs w-24 focus:outline-none focus:border-purple bg-white"
-        />
-      </div>
-      <select
-        value={paidFrom}
-        onChange={(e) => setPaidFrom(e.target.value)}
-        className="border-2 border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-purple text-navy bg-white max-w-[180px]"
-      >
-        <option value="">Paid from… (Stripe)</option>
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>{a.name}{a.holder ? ` — ${a.holder}` : ''}</option>
-        ))}
-      </select>
-      <button
-        onClick={handleSave}
-        disabled={saving || deleting}
-        className="text-xs font-bold text-white bg-navy hover:bg-navy/85 px-3 py-1 rounded-full transition-colors cursor-pointer disabled:opacity-50"
-      >
-        {saving ? 'Saving…' : 'Save'}
-      </button>
-      {isEdit && (
+      ) : (
         <button
-          onClick={handleDelete}
-          disabled={saving || deleting}
-          className="text-xs text-red-500 hover:text-red-700 cursor-pointer disabled:opacity-50 flex items-center gap-1"
-          title="Delete"
+          onClick={handleOpen}
+          className="flex items-center gap-1.5 text-xs font-bold text-navy/50 hover:text-purple transition-colors cursor-pointer"
         >
-          <Trash2 size={12} />
+          <Package size={13} />
+          Add postage cost
         </button>
       )}
-      <button
-        onClick={() => { setOpen(false); setError('') }}
-        className="text-xs text-navy/40 hover:text-navy cursor-pointer"
-      >
-        Cancel
-      </button>
-      {error && <span className="text-xs text-red-500">{error}</span>}
-    </div>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-black text-navy">{isEdit ? 'Edit postage' : 'Add postage cost'}</h2>
+              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Carrier</label>
+                  <select value={carrier} onChange={(e) => setCarrier(e.target.value as Carrier)} className={inputCls}>
+                    {CARRIERS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Amount ($)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => { setAmount(e.target.value); setError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                    placeholder="0.00"
+                    autoFocus={!isEdit}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Paid from <span className="font-normal text-navy/40">(which account covered the postage)</span></label>
+                <select value={paidFrom} onChange={(e) => setPaidFrom(e.target.value)} className={inputCls}>
+                  <option value="">— Unassigned —</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}{a.holder ? ` — ${a.holder}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              {isEdit && (
+                <button
+                  onClick={handleDelete}
+                  disabled={saving || deleting}
+                  className="flex items-center gap-1 text-sm font-bold text-red-500 hover:text-red-700 cursor-pointer disabled:opacity-50 px-3"
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving || deleting} size="sm" className="flex-1">
+                {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

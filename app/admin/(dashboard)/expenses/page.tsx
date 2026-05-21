@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase'
 import ExpenseModal from '@/components/admin/ExpenseModal'
 import DeleteExpenseButton from '@/components/admin/DeleteExpenseButton'
-import type { Expense, MoneyAccount } from '@/types'
+import PostageEntryButton from '@/components/admin/PostageEntryButton'
+import type { Expense, MoneyAccount, PaymentEvent } from '@/types'
 
 interface ExpenseRow {
   id: string
@@ -15,6 +16,7 @@ interface ExpenseRow {
   source: 'manual' | 'order'
   orderId?: string
   expense?: Expense
+  paymentEvent?: PaymentEvent
   paidFromAccountId: string | null
   // Order-derived rows fall back to Stripe if no account is set; manual rows do not.
   paidFromFallback: 'stripe' | null
@@ -30,7 +32,7 @@ async function getAllExpenses(): Promise<LoadedData> {
   const [{ data: manual }, { data: events }, { data: accounts }] = await Promise.all([
     db.from('expenses').select('*'),
     db.from('payment_events')
-      .select('id, type, amount, note, created_at, order_id, paid_from_account_id, orders(id, created_at, shipped_at)')
+      .select('id, type, amount, note, stripe_id, created_at, order_id, paid_from_account_id, orders(id, created_at, shipped_at)')
       .in('type', ['stripe_fee', 'postage_cost']),
     db.from('money_accounts').select('*'),
   ])
@@ -69,8 +71,20 @@ async function getAllExpenses(): Promise<LoadedData> {
       date,
       source: 'order',
       orderId: order?.id,
+      paymentEvent: isPostage && order ? {
+        id: e.id,
+        order_id: order.id,
+        type: 'postage_cost',
+        amount: e.amount,
+        stripe_id: e.stripe_id ?? null,
+        note: e.note ?? null,
+        paid_from_account_id: e.paid_from_account_id ?? null,
+        created_at: e.created_at,
+      } : undefined,
       paidFromAccountId: e.paid_from_account_id ?? null,
-      paidFromFallback: 'stripe',
+      // Stripe fees ARE auto-deducted from the Stripe balance, so it's the implicit
+      // default. Postage usually isn't — leave unassigned rows blank instead.
+      paidFromFallback: isPostage ? null : 'stripe',
     }
   })
 
@@ -198,6 +212,11 @@ export default async function ExpensesPage() {
                           <div className="flex items-center gap-1">
                             <ExpenseModal expense={e.expense} />
                             <DeleteExpenseButton id={e.id} />
+                          </div>
+                        )}
+                        {e.source === 'order' && e.paymentEvent && e.orderId && (
+                          <div className="flex items-center gap-1">
+                            <PostageEntryButton orderId={e.orderId} event={e.paymentEvent} />
                           </div>
                         )}
                       </td>

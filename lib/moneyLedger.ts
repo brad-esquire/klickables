@@ -128,16 +128,19 @@ export async function syncOrderTransactions(orderId: string): Promise<void> {
     }
   }
 
-  // Outflows tied to payment_events (stripe_fee, postage_cost, refund_issued).
-  // Default source is Stripe, but each event can override via paid_from_account_id —
-  // e.g. someone paid US postage out of pocket and is owed reimbursement.
+  // Outflows tied to payment_events. Each event's `paid_from_account_id` controls
+  // which account is debited; for the events that ARE auto-deducted from Stripe
+  // by Stripe itself (stripe_fee, refund_issued) we default to Stripe when unset.
+  // Postage has no such default — it's typically paid out of pocket, so an
+  // unassigned postage row stays out of the ledger until someone is attributed.
   const outflowEvents = events.filter((e) => e.type === 'stripe_fee' || e.type === 'postage_cost' || e.type === 'refund_issued')
   if (outflowEvents.length > 0) {
     const stripe = await findAccount(db, { name: 'Stripe' })
     for (const ev of outflowEvents) {
       const amount = Number(ev.amount)
       if (!amount || amount <= 0) continue
-      const fromId = ev.paid_from_account_id ?? stripe?.id
+      const stripeDefaults = ev.type === 'stripe_fee' || ev.type === 'refund_issued'
+      const fromId = ev.paid_from_account_id ?? (stripeDefaults ? stripe?.id : null)
       if (!fromId) continue
       let description: string
       if (ev.type === 'postage_cost') {
