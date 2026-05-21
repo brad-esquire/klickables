@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase'
 import ExpenseModal from '@/components/admin/ExpenseModal'
 import DeleteExpenseButton from '@/components/admin/DeleteExpenseButton'
-import type { Expense } from '@/types'
+import type { Expense, MoneyAccount } from '@/types'
 
 interface ExpenseRow {
   id: string
@@ -15,16 +15,28 @@ interface ExpenseRow {
   source: 'manual' | 'order'
   orderId?: string
   expense?: Expense
+  paidFromAccountId: string | null
+  // Order-derived rows fall back to Stripe if no account is set; manual rows do not.
+  paidFromFallback: 'stripe' | null
 }
 
-async function getAllExpenses(): Promise<ExpenseRow[]> {
+interface LoadedData {
+  rows: ExpenseRow[]
+  accountsById: Map<string, MoneyAccount>
+}
+
+async function getAllExpenses(): Promise<LoadedData> {
   const db = createAdminClient()
-  const [{ data: manual }, { data: events }] = await Promise.all([
+  const [{ data: manual }, { data: events }, { data: accounts }] = await Promise.all([
     db.from('expenses').select('*'),
     db.from('payment_events')
-      .select('id, type, amount, note, created_at, order_id, orders(id, created_at, shipped_at)')
+      .select('id, type, amount, note, created_at, order_id, paid_from_account_id, orders(id, created_at, shipped_at)')
       .in('type', ['stripe_fee', 'postage_cost']),
+    db.from('money_accounts').select('*'),
   ])
+
+  const accountsById = new Map<string, MoneyAccount>()
+  for (const a of (accounts ?? []) as MoneyAccount[]) accountsById.set(a.id, a)
 
   const manualRows: ExpenseRow[] = (manual ?? []).map((e) => ({
     id: e.id,
@@ -34,6 +46,8 @@ async function getAllExpenses(): Promise<ExpenseRow[]> {
     date: e.date,
     source: 'manual',
     expense: e,
+    paidFromAccountId: e.paid_from_account_id ?? null,
+    paidFromFallback: null,
   }))
 
   const orderRows: ExpenseRow[] = (events ?? []).map((e) => {
@@ -55,10 +69,15 @@ async function getAllExpenses(): Promise<ExpenseRow[]> {
       date,
       source: 'order',
       orderId: order?.id,
+      paidFromAccountId: e.paid_from_account_id ?? null,
+      paidFromFallback: 'stripe',
     }
   })
 
-  return [...manualRows, ...orderRows].sort((a, b) => b.date.localeCompare(a.date))
+  return {
+    rows: [...manualRows, ...orderRows].sort((a, b) => b.date.localeCompare(a.date)),
+    accountsById,
+  }
 }
 
 const categoryColors: Record<string, string> = {
@@ -74,7 +93,7 @@ const categoryColors: Record<string, string> = {
 }
 
 export default async function ExpensesPage() {
-  const rows = await getAllExpenses()
+  const { rows, accountsById } = await getAllExpenses()
 
   const total = rows.reduce((s, e) => s + e.amount, 0)
 
@@ -83,8 +102,19 @@ export default async function ExpensesPage() {
     return acc
   }, {})
 
+  function paidFromLabel(row: ExpenseRow): { text: string; muted: boolean } {
+    if (row.paidFromAccountId) {
+      const acc = accountsById.get(row.paidFromAccountId)
+      if (acc) return { text: acc.name, muted: false }
+    }
+    if (row.paidFromFallback === 'stripe') {
+      return { text: 'Stripe', muted: true }
+    }
+    return { text: '—', muted: true }
+  }
+
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black text-navy">Expenses</h1>
@@ -126,45 +156,58 @@ export default async function ExpensesPage() {
                   <th className="text-left px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Date</th>
                   <th className="text-left px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Description</th>
                   <th className="text-left px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Category</th>
+                  <th className="text-left px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Paid From</th>
                   <th className="text-right px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Amount</th>
                   <th className="px-3 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {rows.map((e) => (
-                  <tr key={e.id} className="hover:bg-gray-50/50">
-                    <td className="px-5 py-3.5 text-sm text-navy/60 whitespace-nowrap">
-                      {new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                    <td className="px-5 py-3.5 text-sm font-semibold text-navy">
-                      {e.source === 'order' && e.orderId ? (
-                        <Link href={`/admin/orders/${e.orderId}`} className="hover:text-purple transition-colors">
-                          {e.description}
-                        </Link>
-                      ) : (
-                        e.description
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${categoryColors[e.category] ?? 'bg-gray-100 text-gray-500'}`}>
-                        {e.category}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm font-bold text-navy text-right">${e.amount.toFixed(2)}</td>
-                    <td className="px-3 py-3.5">
-                      {e.source === 'manual' && e.expense && (
-                        <div className="flex items-center gap-1">
-                          <ExpenseModal expense={e.expense} />
-                          <DeleteExpenseButton id={e.id} />
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((e) => {
+                  const paidFrom = paidFromLabel(e)
+                  return (
+                    <tr key={e.id} className="hover:bg-gray-50/50">
+                      <td className="px-5 py-3.5 text-sm text-navy/60 whitespace-nowrap">
+                        {new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm font-semibold text-navy">
+                        {e.source === 'order' && e.orderId ? (
+                          <Link href={`/admin/orders/${e.orderId}`} className="hover:text-purple transition-colors">
+                            {e.description}
+                          </Link>
+                        ) : (
+                          e.description
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${categoryColors[e.category] ?? 'bg-gray-100 text-gray-500'}`}>
+                          {e.category}
+                        </span>
+                      </td>
+                      <td className={`px-5 py-3.5 text-sm whitespace-nowrap ${paidFrom.muted ? 'text-navy/40 italic' : 'text-navy/70'}`}>
+                        {e.source === 'order' && e.orderId ? (
+                          <Link href={`/admin/orders/${e.orderId}`} className="hover:text-purple transition-colors">
+                            {paidFrom.text}
+                          </Link>
+                        ) : (
+                          paidFrom.text
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm font-bold text-navy text-right">${e.amount.toFixed(2)}</td>
+                      <td className="px-3 py-3.5">
+                        {e.source === 'manual' && e.expense && (
+                          <div className="flex items-center gap-1">
+                            <ExpenseModal expense={e.expense} />
+                            <DeleteExpenseButton id={e.id} />
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-gray-100 bg-gray-50/50">
-                  <td colSpan={3} className="px-5 py-3 text-sm font-black text-navy">Total</td>
+                  <td colSpan={4} className="px-5 py-3 text-sm font-black text-navy">Total</td>
                   <td className="px-5 py-3 text-sm font-black text-navy text-right">${total.toFixed(2)}</td>
                   <td />
                 </tr>
