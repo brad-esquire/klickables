@@ -102,7 +102,7 @@ interface DbResult<T = unknown> {
 }
 
 // ─── Query builder ────────────────────────────────────────────────────────────
-type ConditionType = 'eq' | 'neq' | 'in' | 'lte' | 'gt' | 'gte'
+type ConditionType = 'eq' | 'neq' | 'in' | 'lte' | 'gt' | 'gte' | 'is' | 'isnot' | 'ilike' | 'or'
 type Condition = { type: ConditionType; col: string; val: unknown }
 
 export class QueryBuilder {
@@ -180,6 +180,29 @@ export class QueryBuilder {
   }
   gte(col: string, val: unknown): this {
     this._conditions.push({ type: 'gte', col, val })
+    return this
+  }
+  is(col: string, val: unknown): this {
+    // Supabase's .is() is only used for NULL/true/false. NULL is the only one we need.
+    this._conditions.push({ type: 'is', col, val })
+    return this
+  }
+  not(col: string, op: string, val: unknown): this {
+    // Only "not('col', 'is', null)" is used in this codebase.
+    if (op === 'is') {
+      this._conditions.push({ type: 'isnot', col, val })
+    } else {
+      throw new Error(`local-client: .not('${op}') not implemented`)
+    }
+    return this
+  }
+  ilike(col: string, pattern: string): this {
+    this._conditions.push({ type: 'ilike', col, val: pattern })
+    return this
+  }
+  or(filter: string): this {
+    // Supabase filter syntax: "col1.eq.value,col2.eq.value" -> col1 = value OR col2 = value
+    this._conditions.push({ type: 'or', col: '', val: filter })
     return this
   }
 
@@ -260,6 +283,49 @@ export class QueryBuilder {
           parts.push(`${col} >= ?`)
           params.push(c.val)
           break
+        case 'is':
+          if (c.val === null) parts.push(`${col} IS NULL`)
+          else if (c.val === true)  parts.push(`${col} = 1`)
+          else if (c.val === false) parts.push(`${col} = 0`)
+          else { parts.push(`${col} IS ?`); params.push(c.val) }
+          break
+        case 'isnot':
+          if (c.val === null) parts.push(`${col} IS NOT NULL`)
+          else if (c.val === true)  parts.push(`${col} != 1`)
+          else if (c.val === false) parts.push(`${col} != 0`)
+          else { parts.push(`${col} IS NOT ?`); params.push(c.val) }
+          break
+        case 'ilike':
+          // SQLite's LIKE is case-insensitive for ASCII by default.
+          parts.push(`${col} LIKE ?`)
+          params.push(c.val)
+          break
+        case 'or': {
+          // Parse "col1.eq.val1,col2.eq.val2" → (col1 = ? OR col2 = ?)
+          const clauses = String(c.val).split(',')
+          const sub: string[] = []
+          for (const clause of clauses) {
+            const m = clause.match(/^([^.]+)\.([^.]+)\.(.*)$/)
+            if (!m) continue
+            const [, oc, op, raw] = m
+            const quoted = `"${oc}"`
+            const v = raw === 'null' ? null : raw
+            switch (op) {
+              case 'eq':
+                if (v === null) sub.push(`${quoted} IS NULL`)
+                else { sub.push(`${quoted} = ?`); params.push(v) }
+                break
+              case 'is':
+                if (v === null) sub.push(`${quoted} IS NULL`)
+                else { sub.push(`${quoted} = ?`); params.push(v) }
+                break
+              default:
+                throw new Error(`local-client: .or() with op '${op}' not implemented`)
+            }
+          }
+          if (sub.length) parts.push(`(${sub.join(' OR ')})`)
+          break
+        }
       }
     }
     return { sql: `WHERE ${parts.join(' AND ')}`, params }

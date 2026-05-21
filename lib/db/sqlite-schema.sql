@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method TEXT,
   payment_method_other TEXT,
   sales_reps TEXT NOT NULL DEFAULT '[]',
+  cash_holder TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   fulfilled_at TEXT
 );
@@ -78,3 +79,52 @@ CREATE TABLE IF NOT EXISTS payment_events (
   note TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS money_accounts (
+  id TEXT PRIMARY KEY DEFAULT (gen_random_uuid()),
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK(kind IN ('digital','cash','external')),
+  holder TEXT,
+  default_fee_rate REAL NOT NULL DEFAULT 0,
+  default_fee_fixed REAL NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id TEXT PRIMARY KEY DEFAULT (gen_random_uuid()),
+  description TEXT NOT NULL,
+  amount REAL NOT NULL,
+  category TEXT NOT NULL DEFAULT 'Other',
+  date TEXT NOT NULL DEFAULT (date('now')),
+  paid_from_account_id TEXT REFERENCES money_accounts(id),
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS money_transactions (
+  id TEXT PRIMARY KEY DEFAULT (gen_random_uuid()),
+  occurred_at TEXT NOT NULL DEFAULT (date('now')),
+  kind TEXT NOT NULL CHECK(kind IN ('sale','expense','transfer','reimbursement','adjustment')),
+  from_account_id TEXT REFERENCES money_accounts(id),
+  to_account_id TEXT REFERENCES money_accounts(id),
+  amount REAL NOT NULL CHECK(amount > 0),
+  order_id TEXT REFERENCES orders(id) ON DELETE SET NULL,
+  expense_id TEXT REFERENCES expenses(id) ON DELETE SET NULL,
+  payment_event_id TEXT REFERENCES payment_events(id) ON DELETE SET NULL,
+  description TEXT,
+  notes TEXT,
+  manual_override INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Seed money accounts
+INSERT OR IGNORE INTO money_accounts (id, name, kind, holder, default_fee_rate, default_fee_fixed, sort_order) VALUES
+  ('seed-stripe',  'Stripe',       'digital', NULL,      0,      0,    10),
+  ('seed-venmo',   'Venmo',        'digital', NULL,      0.019,  0.10, 20),
+  ('seed-paypal',  'PayPal',       'digital', NULL,      0.0299, 0.49, 21),
+  ('seed-zelle',   'Zelle',        'digital', NULL,      0,      0,    22),
+  ('seed-kirra',   'Kirra cash',   'cash',    'Kirra',   0,      0,    30),
+  ('seed-ashley',  'Ashley cash',  'cash',    'Ashley',  0,      0,    31),
+  ('seed-lorelei', 'Lorelei cash', 'cash',    'Lorelei', 0,      0,    32),
+  ('seed-isla',    'Isla cash',    'cash',    'Isla',    0,      0,    33);

@@ -83,6 +83,15 @@ export const SALES_REPS: { value: SalesRep; label: string }[] = [
   { value: 'website', label: 'Website' },
 ]
 
+export type CashHolder = 'kirra' | 'ashley' | 'lorelei' | 'isla'
+
+export const CASH_HOLDERS: { value: CashHolder; label: string }[] = [
+  { value: 'kirra',   label: 'Kirra' },
+  { value: 'ashley',  label: 'Ashley' },
+  { value: 'lorelei', label: 'Lorelei' },
+  { value: 'isla',    label: 'Isla' },
+]
+
 export interface Order {
   id: string
   stripe_payment_intent_id: string | null
@@ -100,6 +109,7 @@ export interface Order {
   payment_method: PaymentMethod | null
   payment_method_other: string | null
   sales_reps: SalesRep[]
+  cash_holder: CashHolder | null
   created_at: string
   notes: string | null
   fulfilled_at: string | null
@@ -115,6 +125,7 @@ export interface Expense {
   amount: number
   category: string
   date: string
+  paid_from_account_id: string | null
   created_at: string
 }
 
@@ -168,4 +179,54 @@ export interface PaymentEvent {
   stripe_id: string | null
   note: string | null
   created_at: string
+}
+
+// Money tracker: accounts where money sits and the ledger of every movement between them.
+
+export type MoneyAccountKind = 'digital' | 'cash' | 'external'
+
+export interface MoneyAccount {
+  id: string
+  name: string
+  kind: MoneyAccountKind
+  holder: string | null
+  default_fee_rate: number
+  default_fee_fixed: number
+  archived: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type MoneyTransactionKind = 'sale' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment'
+
+export interface MoneyTransaction {
+  id: string
+  occurred_at: string
+  kind: MoneyTransactionKind
+  from_account_id: string | null
+  to_account_id: string | null
+  amount: number
+  order_id: string | null
+  expense_id: string | null
+  payment_event_id: string | null
+  description: string | null
+  notes: string | null
+  manual_override: boolean
+  created_at: string
+}
+
+export const MONEY_TRANSACTION_KINDS: { value: MoneyTransactionKind; label: string }[] = [
+  { value: 'sale',          label: 'Sale' },
+  { value: 'expense',       label: 'Expense' },
+  { value: 'transfer',      label: 'Transfer' },
+  { value: 'reimbursement', label: 'Reimbursement' },
+  { value: 'adjustment',    label: 'Adjustment' },
+]
+
+export interface AccountBalance {
+  account: MoneyAccount
+  balance: number
+  inflow: number
+  outflow: number
+  transaction_count: number
 }

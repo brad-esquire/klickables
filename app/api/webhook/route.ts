@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase'
 import { sendOrderConfirmation } from '@/lib/email'
+import { syncOrderTransactions } from '@/lib/moneyLedger'
 import type Stripe from 'stripe'
 import type { CartItem, ShippingAddress } from '@/types'
 
@@ -158,6 +159,8 @@ export async function POST(req: NextRequest) {
       console.error('Email send failed:', emailErr)
     }
   }
+
+  await syncOrderTransactions(order.id as string)
 
   return NextResponse.json({ received: true })
 }

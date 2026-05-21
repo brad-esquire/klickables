@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Plus, Pencil } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { EXPENSE_CATEGORIES } from '@/types'
-import type { Expense } from '@/types'
+import type { Expense, MoneyAccount } from '@/types'
 
 const inputCls = 'w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple text-sm'
 const labelCls = 'block text-sm font-bold text-navy mb-1.5'
@@ -23,14 +23,25 @@ export default function ExpenseModal({ expense }: Props) {
   const [amount, setAmount] = useState(expense?.amount.toFixed(2) ?? '')
   const [category, setCategory] = useState(expense?.category ?? 'Materials')
   const [date, setDate] = useState(expense?.date ?? new Date().toISOString().slice(0, 10))
+  const [paidFrom, setPaidFrom] = useState(expense?.paid_from_account_id ?? '')
+  const [accounts, setAccounts] = useState<MoneyAccount[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    fetch('/api/admin/money/accounts')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setAccounts((data ?? []).filter((a: MoneyAccount) => !a.archived)))
+      .catch(() => setAccounts([]))
+  }, [open])
 
   function handleOpen() {
     setDescription(expense?.description ?? '')
     setAmount(expense?.amount.toFixed(2) ?? '')
     setCategory(expense?.category ?? 'Materials')
     setDate(expense?.date ?? new Date().toISOString().slice(0, 10))
+    setPaidFrom(expense?.paid_from_account_id ?? '')
     setError('')
     setOpen(true)
   }
@@ -46,7 +57,13 @@ export default function ExpenseModal({ expense }: Props) {
     const res = await fetch(url, {
       method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: description.trim(), amount: amt, category, date }),
+      body: JSON.stringify({
+        description: description.trim(),
+        amount: amt,
+        category,
+        date,
+        paid_from_account_id: paidFrom || null,
+      }),
     })
     setSaving(false)
     if (!res.ok) { setError('Failed to save. Please try again.'); return }
@@ -122,6 +139,16 @@ export default function ExpenseModal({ expense }: Props) {
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
                   {EXPENSE_CATEGORIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Paid from <span className="font-normal text-navy/40">(optional — links this expense to the Money ledger)</span></label>
+                <select value={paidFrom} onChange={(e) => setPaidFrom(e.target.value)} className={inputCls}>
+                  <option value="">Not tracked</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}{a.holder ? ` — ${a.holder}` : ''}</option>
                   ))}
                 </select>
               </div>

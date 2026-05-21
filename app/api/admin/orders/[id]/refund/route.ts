@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase'
 import { getStripe } from '@/lib/stripe'
+import { syncOrderTransactions } from '@/lib/moneyLedger'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (refundAmount >= order.total) {
     await db.from('orders').update({ status: 'cancelled' }).eq('id', id)
   }
+
+  await syncOrderTransactions(id)
 
   return NextResponse.json({ success: true, refundId: stripeRefundId })
 }

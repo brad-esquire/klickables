@@ -3,7 +3,10 @@ import { auth } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase'
 import { sendShippedNotification } from '@/lib/email'
 import { stripe } from '@/lib/stripe'
+import { syncOrderTransactions } from '@/lib/moneyLedger'
 import type Stripe from 'stripe'
+
+const VALID_CASH_HOLDERS = ['kirra', 'ashley', 'lorelei', 'isla']
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -19,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
   const body = await req.json()
-  const { customer_name, email, fulfillment_type, shipping_address, pickup_location, status, subtotal, shipping_cost, discount_amount, total, discount_code, line_items, payment_method, payment_method_other, sales_reps } = body
+  const { customer_name, email, fulfillment_type, shipping_address, pickup_location, status, subtotal, shipping_cost, discount_amount, total, discount_code, line_items, payment_method, payment_method_other, cash_holder, sales_reps } = body
 
   if (!customer_name || !['pending', 'paid', 'fulfilled', 'cancelled', 'shipped', 'out_for_delivery'].includes(status) || total < 0) {
     return NextResponse.json({ error: 'Invalid order data' }, { status: 400 })
@@ -32,6 +35,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const VALID_SALES_REPS = ['kirra', 'lorelei', 'isla', 'ashley', 'website']
   if (payment_method != null && payment_method !== '' && !VALID_PAYMENT_METHODS.includes(payment_method)) {
     return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
+  }
+  if (cash_holder != null && cash_holder !== '' && !VALID_CASH_HOLDERS.includes(cash_holder)) {
+    return NextResponse.json({ error: 'Invalid cash holder' }, { status: 400 })
   }
   if (sales_reps != null && (!Array.isArray(sales_reps) || sales_reps.some((r: unknown) => typeof r !== 'string' || !VALID_SALES_REPS.includes(r)))) {
     return NextResponse.json({ error: 'Invalid sales reps' }, { status: 400 })
@@ -46,6 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     discount_code: discount_code ?? null,
     payment_method: payment_method || null,
     payment_method_other: payment_method === 'other' ? (payment_method_other?.trim() || null) : null,
+    cash_holder: payment_method === 'cash' ? (cash_holder || null) : null,
     sales_reps: Array.isArray(sales_reps) ? sales_reps : [],
   }
   if (status === 'fulfilled') orderUpdate.fulfilled_at = new Date().toISOString()
@@ -56,6 +63,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     line_items.map((item: Record<string, unknown>) => ({ ...item, order_id: id }))
   )
   if (itemsError) return NextResponse.json({ error: 'Failed to save items' }, { status: 400 })
+
+  await syncOrderTransactions(id)
 
   return NextResponse.json({ success: true })
 }
@@ -80,6 +89,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       stripe_id: null,
       note: shippingCarrier ?? 'USPS',
     })
+    await syncOrderTransactions(id)
     return NextResponse.json({ success: true })
   }
 
@@ -109,6 +119,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       note: `${feePercent}% — net $${(balanceTx.net / 100).toFixed(2)}`,
       created_at: new Date(balanceTx.created * 1000).toISOString(),
     })
+    await syncOrderTransactions(id)
     return NextResponse.json({ success: true })
   }
 
@@ -155,6 +166,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
   }
+
+  await syncOrderTransactions(id)
 
   return NextResponse.json({ success: true })
 }

@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
-import { PAYMENT_METHODS, SALES_REPS } from '@/types'
-import type { CartItemCustomization, Order, OrderItem, PaymentMethod, Product, ProductVariant, SalesRep } from '@/types'
+import { PAYMENT_METHODS, SALES_REPS, CASH_HOLDERS } from '@/types'
+import type { CartItemCustomization, CashHolder, Order, OrderItem, PaymentMethod, Product, ProductVariant, SalesRep } from '@/types'
 
 type ProductWithVariants = Product & { product_variants: ProductVariant[] }
 
@@ -75,6 +75,7 @@ export default function EditOrderForm({ order }: Props) {
   const [status, setStatus] = useState(order.status)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>(order.payment_method ?? '')
   const [paymentMethodOther, setPaymentMethodOther] = useState(order.payment_method_other ?? '')
+  const [cashHolder, setCashHolder] = useState<CashHolder | ''>(order.cash_holder ?? '')
   const [salesReps, setSalesReps] = useState<SalesRep[]>(order.sales_reps ?? [])
   const [totalInput, setTotalInput] = useState(String(order.total ?? 0))
   const [totalManuallyEdited, setTotalManuallyEdited] = useState(true)
@@ -194,6 +195,7 @@ export default function EditOrderForm({ order }: Props) {
         discount_code: discountCode.trim() || null,
         payment_method: paymentMethod || null,
         payment_method_other: paymentMethod === 'other' ? (paymentMethodOther.trim() || null) : null,
+        cash_holder: paymentMethod === 'cash' ? (cashHolder || null) : null,
         sales_reps: salesReps,
         line_items,
       }),
@@ -412,6 +414,17 @@ export default function EditOrderForm({ order }: Props) {
           <div>
             <label className={labelCls}>Method Name</label>
             <input value={paymentMethodOther} onChange={(e) => setPaymentMethodOther(e.target.value)} className={inputCls} placeholder="e.g. Bank transfer, Cheque" />
+          </div>
+        )}
+        {paymentMethod === 'cash' && (
+          <div>
+            <label className={labelCls}>Cash Holder <span className="font-normal text-navy/40">(who physically has the cash)</span></label>
+            <select value={cashHolder} onChange={(e) => setCashHolder(e.target.value as CashHolder | '')} className={inputCls}>
+              <option value="">Select…</option>
+              {CASH_HOLDERS.map((h) => (
+                <option key={h.value} value={h.value}>{h.label}</option>
+              ))}
+            </select>
           </div>
         )}
         <div>

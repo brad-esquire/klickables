@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase'
+import { syncOrderTransactions } from '@/lib/moneyLedger'
+
+const VALID_CASH_HOLDERS = ['kirra', 'ashley', 'lorelei', 'isla']
 
 export async function GET() {
   const session = await auth()
@@ -19,7 +22,7 @@ export async function POST(req: NextRequest) {
     customer_name, email, fulfillment_type, shipping_address, pickup_location,
     status, subtotal, shipping_cost, discount_amount, total,
     discount_code, payment_note, line_items,
-    payment_method, payment_method_other, sales_reps,
+    payment_method, payment_method_other, cash_holder, sales_reps,
   } = body
 
   const VALID_PAYMENT_METHODS = ['stripe', 'cash', 'venmo', 'paypal', 'zelle', 'other']
@@ -27,6 +30,9 @@ export async function POST(req: NextRequest) {
 
   if (payment_method != null && !VALID_PAYMENT_METHODS.includes(payment_method)) {
     return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
+  }
+  if (cash_holder != null && !VALID_CASH_HOLDERS.includes(cash_holder)) {
+    return NextResponse.json({ error: 'Invalid cash holder' }, { status: 400 })
   }
   if (sales_reps != null && (!Array.isArray(sales_reps) || sales_reps.some((r: unknown) => typeof r !== 'string' || !VALID_SALES_REPS.includes(r)))) {
     return NextResponse.json({ error: 'Invalid sales reps' }, { status: 400 })
@@ -69,6 +75,7 @@ export async function POST(req: NextRequest) {
     discount_code: discount_code || null,
     payment_method: payment_method ?? null,
     payment_method_other: payment_method === 'other' ? (payment_method_other?.trim() || null) : null,
+    cash_holder: payment_method === 'cash' ? (cash_holder ?? null) : null,
     sales_reps: Array.isArray(sales_reps) ? sales_reps : [],
   }).select().single()
 
@@ -111,6 +118,8 @@ export async function POST(req: NextRequest) {
       note,
     })
   }
+
+  await syncOrderTransactions(order.id)
 
   return NextResponse.json({ id: order.id }, { status: 201 })
 }
