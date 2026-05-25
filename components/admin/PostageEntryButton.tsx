@@ -71,8 +71,9 @@ export default function PostageEntryButton({ orderId, event, defaultCarrier }: P
           }),
         })
     setSaving(false)
-    if (res.ok) { setOpen(false); router.refresh() }
-    else { setError('Failed to save.') }
+    if (res.ok) { setOpen(false); router.refresh(); return }
+    const detail = await res.json().catch(() => ({} as Record<string, unknown>))
+    setError(typeof detail.error === 'string' ? detail.error : `Failed to save (${res.status}).`)
   }
 
   async function handleDelete() {
@@ -81,8 +82,9 @@ export default function PostageEntryButton({ orderId, event, defaultCarrier }: P
     setDeleting(true)
     const res = await fetch(`/api/admin/orders/${orderId}/payment-events/${event!.id}`, { method: 'DELETE' })
     setDeleting(false)
-    if (res.ok) { setOpen(false); router.refresh() }
-    else { setError('Failed to delete.') }
+    if (res.ok) { setOpen(false); router.refresh(); return }
+    const detail = await res.json().catch(() => ({} as Record<string, unknown>))
+    setError(typeof detail.error === 'string' ? detail.error : `Failed to delete (${res.status}).`)
   }
 
   return (
