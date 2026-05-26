@@ -76,7 +76,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           {product.description && (
-            <p className="text-navy/70 leading-relaxed">{product.description}</p>
+            <p className="text-navy/70 leading-relaxed whitespace-pre-line">{product.description}</p>
           )}
 
           {variants.length > 0 && (

@@ -27,6 +27,8 @@ const COLOR_MAP: Record<string, string> = {
 const GRADIENT_MAP: Record<string, string> = {
   'titanium black': 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 20%, #4a4a4a 35%, #111 50%, #555 65%, #1a1a1a 80%, #0a0a0a 100%)',
   'titanium blue':  'linear-gradient(135deg, #0d1b2a 0%, #1B3A6B 20%, #3a6bc4 35%, #0f2547 50%, #4a7fd4 65%, #1B3A6B 80%, #0d1b2a 100%)',
+  gold:    'linear-gradient(135deg, #8a6d1f 0%, #d4af37 20%, #f9e27a 35%, #b8860b 50%, #f9e27a 65%, #d4af37 80%, #8a6d1f 100%)',
+  rainbow: 'linear-gradient(135deg, #ff0000 0%, #ff8000 17%, #ffff00 33%, #00cc00 50%, #0080ff 67%, #8000ff 83%, #ff00ff 100%)',
 }
 
 export default function VariantSelector({ variants, selectedId, onSelect, ignoreStock }: VariantSelectorProps) {
