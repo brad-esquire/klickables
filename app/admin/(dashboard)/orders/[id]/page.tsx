@@ -17,6 +17,7 @@ import OutForDeliveryButton from '@/components/admin/OutForDeliveryButton'
 import OrderNotes from '@/components/admin/OrderNotes'
 import FetchStripeFeeButton from '@/components/admin/FetchStripeFeeButton'
 import PostageEntryButton from '@/components/admin/PostageEntryButton'
+import DeleteOrderButton from '@/components/admin/DeleteOrderButton'
 import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
 import { CUSTOM_CLICKER_COLORS, PAYMENT_METHODS, SALES_REPS } from '@/types'
@@ -292,6 +293,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             alreadyRefunded={totalRefunded}
           />
         )}
+
+        <div className="pt-4 border-t border-gray-100">
+          <DeleteOrderButton
+            orderId={order.id}
+            customerName={order.customer_name}
+            isStripePayment={!!order.stripe_payment_intent_id}
+          />
+        </div>
       </div>
     </div>
   )

@@ -172,3 +172,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json({ success: true })
 }
+
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { id } = await params
+  const db = createAdminClient()
+  // Remove ledger rows tied to this order first — the FK is SET NULL, so they'd
+  // otherwise become orphan rows with no source. Manual entries also go since
+  // their referent is being deleted.
+  await db.from('money_transactions').delete().eq('order_id', id)
+  // order_items and payment_events cascade via FK ON DELETE CASCADE
+  const { error } = await db.from('orders').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
