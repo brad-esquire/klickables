@@ -6,6 +6,7 @@ import { useCartStore, useCartHydrated } from '@/store/cartStore'
 import Button from '@/components/ui/Button'
 import { useState, useEffect } from 'react'
 import { Trash2 } from 'lucide-react'
+import { trackViewCart } from '@/lib/analytics'
 
 export default function CartPage() {
   const { items, removeItem, updateQty } = useCartStore()
@@ -24,6 +25,23 @@ export default function CartPage() {
       .then((d) => setShipping(d.cost))
       .catch(() => setShipping(null))
   }, [subtotal])
+
+  // Fire view_cart once after hydration when the cart has items.
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return
+    trackViewCart(
+      items.map((i) => ({
+        item_id: i.variantId,
+        item_name: i.productName,
+        item_variant: i.variantLabel,
+        price: i.price,
+        quantity: i.quantity,
+      })),
+      subtotal,
+    )
+    // Only fire when hydration completes — not on every cart edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated])
 
   async function applyDiscount() {
     if (!discountCode.trim()) return

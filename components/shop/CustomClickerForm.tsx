@@ -7,6 +7,7 @@ import { Upload, X } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { CUSTOM_CLICKER_COLORS } from '@/types'
 import Button from '@/components/ui/Button'
+import { trackAddToCart } from '@/lib/analytics'
 
 const MIN_QTY = 50
 const PRICE_PER = 2
@@ -72,6 +73,13 @@ export default function CustomClickerForm() {
         quantity: qty,
         image: logoUrl,
         customization: { color1: color1Name, color2: color2Name, logoUrl },
+      })
+      trackAddToCart({
+        item_id: 'custom-clicker',
+        item_name: 'Custom Clicker',
+        item_variant: `${color1Name} / ${color2Name}`,
+        price: PRICE_PER,
+        quantity: qty,
       })
       router.push('/cart')
     } catch (err) {

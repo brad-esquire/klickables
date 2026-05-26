@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import JsonLd from "@/components/seo/JsonLd";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -70,6 +71,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${nunito.variable} h-full`} data-scroll-behavior="smooth">
       <body className="min-h-full flex flex-col antialiased">
+          <GoogleAnalytics />
           <JsonLd data={organizationLd} />
           <JsonLd data={websiteLd} />
           <Navbar />

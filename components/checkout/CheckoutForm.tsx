@@ -7,10 +7,19 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { useCartStore, useCartHydrated } from '@/store/cartStore'
 import Button from '@/components/ui/Button'
 import { MapPin, Truck } from 'lucide-react'
+import { trackBeginCheckout } from '@/lib/analytics'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
-function PaymentForm({ clientSecret }: { clientSecret: string }) {
+interface PendingPurchase {
+  value: number
+  shipping: number
+  discount: number
+  coupon: string
+  items: Array<{ item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }>
+}
+
+function PaymentForm({ clientSecret, purchase }: { clientSecret: string; purchase: PendingPurchase }) {
   const stripe = useStripe()
   const elements = useElements()
   const [paying, setPaying] = useState(false)
@@ -21,6 +30,13 @@ function PaymentForm({ clientSecret }: { clientSecret: string }) {
     if (!stripe || !elements) return
     setPaying(true)
     setError('')
+
+    // Stash a snapshot for the success page's GA purchase event. The cart is
+    // cleared on success so this is the easiest way to give that page the
+    // pre-payment totals and item list without an extra round-trip.
+    try {
+      sessionStorage.setItem('klickables.pendingPurchase', JSON.stringify(purchase))
+    } catch {}
 
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
@@ -78,6 +94,23 @@ export default function CheckoutForm() {
       .then((r) => r.json())
       .then((d) => setShipping(d.cost))
   }, [subtotal, fulfillmentType])
+
+  // Fire begin_checkout once hydrated, when the user actually has a cart to check out with.
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return
+    trackBeginCheckout(
+      items.map((i) => ({
+        item_id: i.variantId,
+        item_name: i.productName,
+        item_variant: i.variantLabel,
+        price: i.price,
+        quantity: i.quantity,
+      })),
+      subtotal,
+    )
+    // Only on hydration, not every cart-state recomputation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated])
 
   async function proceedToPayment(e: React.FormEvent) {
     e.preventDefault()
@@ -221,7 +254,22 @@ export default function CheckoutForm() {
           </form>
         ) : clientSecret ? (
           <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-            <PaymentForm clientSecret={clientSecret} />
+            <PaymentForm
+              clientSecret={clientSecret}
+              purchase={{
+                value: total,
+                shipping,
+                discount,
+                coupon: discountCode,
+                items: items.map((i) => ({
+                  item_id: i.variantId,
+                  item_name: i.productName,
+                  item_variant: i.variantLabel,
+                  price: i.price,
+                  quantity: i.quantity,
+                })),
+              }}
+            />
           </Elements>
         ) : null}
       </div>

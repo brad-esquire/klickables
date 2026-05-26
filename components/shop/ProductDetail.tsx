@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCartStore } from '@/store/cartStore'
 
 import VariantSelector from './VariantSelector'
 import ImageGallery from './ImageGallery'
 import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
+import { trackViewItem, trackAddToCart } from '@/lib/analytics'
 
 interface ProductDetailProps {
   product: Product
@@ -24,6 +25,17 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const variantLabel = [selectedVariant?.color, selectedVariant?.size].filter(Boolean).join(' / ')
   const inStock = product.ignore_stock || (selectedVariant?.stock ?? 0) > 0
 
+  useEffect(() => {
+    trackViewItem({
+      id: product.id,
+      name: product.name,
+      price: selectedVariant?.price,
+      variantLabel: variantLabel || undefined,
+    })
+    // Intentionally only fires on product mount, not every variant change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id])
+
   function handleAddToCart() {
     if (!selectedVariant || !inStock) return
     addItem({
@@ -34,6 +46,13 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       price: selectedVariant.price,
       quantity: qty,
       image: product.images?.[0] ?? '',
+    })
+    trackAddToCart({
+      item_id: selectedVariant.id,
+      item_name: product.name,
+      item_variant: variantLabel || undefined,
+      price: selectedVariant.price,
+      quantity: qty,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
