@@ -45,8 +45,15 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
               const variant = variants.find((v) => v.color === color && (selectedId ? v.id === selectedId || variants.find(x => x.id === selectedId)?.size === v.size : true))
               const isSelected = variant && selectedId === variant?.id
               const key = color.trim().toLowerCase()
-              const gradient = GRADIENT_MAP[key]
-              const hex = COLOR_MAP[key] ?? '#ccc'
+              const isGlow = key.startsWith('glow in the dark')
+              const baseKey = isGlow ? key.replace('glow in the dark', '').trim() : key
+              const gradient = GRADIENT_MAP[baseKey]
+              const hex = COLOR_MAP[baseKey] ?? '#ccc'
+
+              const swatchStyle = {
+                ...(gradient ? { background: gradient } : { backgroundColor: hex }),
+                ...(isGlow ? { boxShadow: '0 0 10px 3px rgba(132, 255, 153, 0.9)' } : {}),
+              }
 
               return (
                 <button
@@ -63,7 +70,7 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
                     'w-8 h-8 rounded-full border-2 transition-all',
                     isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110'
                   )}
-                  style={gradient ? { background: gradient } : { backgroundColor: hex }}
+                  style={swatchStyle}
                 />
               )
             })}
