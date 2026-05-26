@@ -7,9 +7,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session) redirect('/admin/login')
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen md:flex bg-gray-50">
       <AdminSidebar />
-      <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">{children}</main>
     </div>
   )
 }

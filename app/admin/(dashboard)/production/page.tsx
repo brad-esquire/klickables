@@ -119,7 +119,7 @@ export default async function ProductionQueuePage() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="font-black text-navy">What to Make</h2>
             </div>
-            <table className="w-full">
+            <div className="overflow-x-auto"><table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 text-xs font-bold text-navy/60 uppercase">
                 <tr>
                   <th className="px-5 py-3 text-left">Product</th>
@@ -164,14 +164,14 @@ export default async function ProductionQueuePage() {
                   <td className="px-5 py-3 text-right font-black text-pink text-lg">{totalClickers}</td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="font-black text-navy">Unfulfilled Orders</h2>
             </div>
-            <table className="w-full">
+            <div className="overflow-x-auto"><table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 text-xs font-bold text-navy/60 uppercase">
                 <tr>
                   <th className="px-5 py-3 text-left">Order</th>
@@ -205,7 +205,7 @@ export default async function ProductionQueuePage() {
                   )
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       )}

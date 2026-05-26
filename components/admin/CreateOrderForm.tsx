@@ -257,8 +257,8 @@ export default function CreateOrderForm() {
               const variants = product?.product_variants ?? []
               const lineTotal = row.unitPrice * (parseInt(row.quantity) || 0)
               return (
-                <div key={row.rowId} className="grid grid-cols-12 gap-2 items-end border border-gray-100 rounded-xl p-3">
-                  <div className="col-span-4">
+                <div key={row.rowId} className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-end border border-gray-100 rounded-xl p-3">
+                  <div className="col-span-2 sm:col-span-4">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Product</label>
                     <select
                       value={row.productId}
@@ -269,7 +269,7 @@ export default function CreateOrderForm() {
                       {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2 sm:col-span-3">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Variant</label>
                     <select
                       value={row.variantId}
@@ -283,7 +283,7 @@ export default function CreateOrderForm() {
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Qty</label>
                     <input
                       type="number" min="1"
@@ -292,11 +292,11 @@ export default function CreateOrderForm() {
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Total</label>
                     <p className="text-sm font-bold text-navy px-3 py-2">${lineTotal.toFixed(2)}</p>
                   </div>
-                  <div className="col-span-1 flex justify-end pb-1">
+                  <div className="col-span-2 sm:col-span-1 flex justify-end pb-1">
                     <button type="button" onClick={() => removeRow(row.rowId)} className="text-gray-300 hover:text-red-500 transition-colors">
                       <Trash2 size={16} />
                     </button>

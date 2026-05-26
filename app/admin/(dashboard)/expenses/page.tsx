@@ -164,7 +164,7 @@ export default async function ExpensesPage() {
 
           {/* Expense list */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full">
+            <div className="overflow-x-auto"><table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Date</th>
@@ -231,7 +231,7 @@ export default async function ExpensesPage() {
                   <td />
                 </tr>
               </tfoot>
-            </table>
+            </table></div>
           </div>
         </div>
       )}

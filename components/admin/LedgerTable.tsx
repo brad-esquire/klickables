@@ -75,7 +75,7 @@ export default function LedgerTable({ transactions, accounts }: Props) {
           {transactions.length === 0 ? 'No transactions yet.' : 'No transactions match the filter.'}
         </div>
       ) : (
-        <table className="w-full">
+        <div className="overflow-x-auto"><table className="w-full min-w-[640px]">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
               <th className="text-left px-5 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Date</th>
@@ -121,7 +121,7 @@ export default function LedgerTable({ transactions, accounts }: Props) {
               )
             })}
           </tbody>
-        </table>
+        </table></div>
       )}
     </div>
   )

@@ -53,12 +53,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-navy">Order #{order.id.slice(0, 8).toUpperCase()}</h1>
           <p className="text-navy/50 text-sm">{new Date(order.created_at).toLocaleString('en-US')}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant={statusVariant[order.status] ?? 'navy'} className="text-sm px-4 py-1">{order.status}</Badge>
           {order.fulfillment_type === 'shipping' && (
             <PrintLabelButton order={order} />

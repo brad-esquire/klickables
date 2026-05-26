@@ -93,7 +93,7 @@ export default async function AdminDashboard() {
     <div>
       <h1 className="text-3xl font-black text-navy mb-8">Dashboard</h1>
 
-      <div className="grid grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
         {/* Total Orders */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-2">
