@@ -29,6 +29,7 @@ const GRADIENT_MAP: Record<string, string> = {
   'titanium blue':  'linear-gradient(135deg, #0d1b2a 0%, #1B3A6B 20%, #3a6bc4 35%, #0f2547 50%, #4a7fd4 65%, #1B3A6B 80%, #0d1b2a 100%)',
   gold:    'linear-gradient(135deg, #8a6d1f 0%, #d4af37 20%, #f9e27a 35%, #b8860b 50%, #f9e27a 65%, #d4af37 80%, #8a6d1f 100%)',
   rainbow: 'linear-gradient(135deg, #ff0000 0%, #ff8000 17%, #ffff00 33%, #00cc00 50%, #0080ff 67%, #8000ff 83%, #ff00ff 100%)',
+  mystery: 'conic-gradient(from 0deg, #9655C8, #F06591, #7ED4EE, #22C55E, #EAB308, #F97316, #9655C8)',
 }
 
 export default function VariantSelector({ variants, selectedId, onSelect, ignoreStock }: VariantSelectorProps) {
@@ -45,6 +46,7 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
               const variant = variants.find((v) => v.color === color && (selectedId ? v.id === selectedId || variants.find(x => x.id === selectedId)?.size === v.size : true))
               const isSelected = variant && selectedId === variant?.id
               const key = color.trim().toLowerCase()
+              const isMystery = key === 'mystery'
               const isGlow = key.startsWith('glow in the dark')
               const baseKey = isGlow ? key.replace('glow in the dark', '').trim() : key
               const gradient = GRADIENT_MAP[baseKey]
@@ -67,11 +69,13 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
                     if (match) onSelect(match)
                   }}
                   className={cn(
-                    'w-8 h-8 rounded-full border-2 transition-all',
+                    'w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center',
                     isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110'
                   )}
                   style={swatchStyle}
-                />
+                >
+                  {isMystery && <span className="text-white text-sm font-black drop-shadow">?</span>}
+                </button>
               )
             })}
           </div>

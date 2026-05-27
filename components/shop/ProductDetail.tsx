@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useCartStore } from '@/store/cartStore'
 
 import VariantSelector from './VariantSelector'
+import MysteryColorInfo from './MysteryColorInfo'
 import ImageGallery from './ImageGallery'
 import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
@@ -24,6 +25,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
   const variantLabel = [selectedVariant?.color, selectedVariant?.size].filter(Boolean).join(' / ')
   const inStock = product.ignore_stock || (selectedVariant?.stock ?? 0) > 0
+  const isMystery = selectedVariant?.color?.trim().toLowerCase() === 'mystery'
 
   useEffect(() => {
     trackViewItem({
@@ -64,6 +66,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         {/* Images */}
         <div>
           <ImageGallery images={product.images ?? []} alt={product.name} />
+          {isMystery && <MysteryColorInfo />}
         </div>
 
         {/* Info */}
