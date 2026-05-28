@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
-import { PAYMENT_METHODS, SALES_REPS } from '@/types'
+import { PAYMENT_METHODS, SALES_REPS, CASH_HOLDERS } from '@/types'
 import type { Order } from '@/types'
 
 async function getOrders(): Promise<Order[]> {
@@ -50,6 +50,7 @@ export default async function AdminOrdersPage() {
                 <th className="px-5 py-3 text-left">Total</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-left">Payment</th>
+                <th className="px-5 py-3 text-left">Cash Holder</th>
                 <th className="px-5 py-3 text-left">Sales Rep</th>
                 <th className="px-5 py-3 text-left">Date</th>
                 <th className="px-5 py-3"></th>
@@ -73,6 +74,11 @@ export default async function AdminOrdersPage() {
                       : order.payment_method
                         ? (PAYMENT_METHODS.find((m) => m.value === order.payment_method)?.label ?? order.payment_method)
                         : <span className="text-navy/30">—</span>}
+                  </td>
+                  <td className="px-5 py-4 text-sm text-navy/70">
+                    {order.cash_holder
+                      ? (CASH_HOLDERS.find((h) => h.value === order.cash_holder)?.label ?? order.cash_holder)
+                      : <span className="text-navy/30">—</span>}
                   </td>
                   <td className="px-5 py-4 text-sm text-navy/70">
                     {order.sales_reps && order.sales_reps.length > 0

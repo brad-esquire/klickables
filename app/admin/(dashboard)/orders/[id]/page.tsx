@@ -20,7 +20,7 @@ import PostageEntryButton from '@/components/admin/PostageEntryButton'
 import DeleteOrderButton from '@/components/admin/DeleteOrderButton'
 import { trackingUrl } from '@/lib/tracking'
 import type { Order, OrderItem, PaymentEvent } from '@/types'
-import { CUSTOM_CLICKER_COLORS, PAYMENT_METHODS, SALES_REPS } from '@/types'
+import { CUSTOM_CLICKER_COLORS, PAYMENT_METHODS, SALES_REPS, CASH_HOLDERS } from '@/types'
 
 const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
   paid: 'pink',
@@ -128,6 +128,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   : <span className="text-navy/40 font-normal">— not set —</span>}
               </p>
             </div>
+            {order.payment_method === 'cash' && (
+              <div>
+                <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">Cash Holder</p>
+                <p className="text-navy font-semibold">
+                  {order.cash_holder
+                    ? (CASH_HOLDERS.find((h) => h.value === order.cash_holder)?.label ?? order.cash_holder)
+                    : <span className="text-navy/40 font-normal">— not set —</span>}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
