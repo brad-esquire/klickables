@@ -2,25 +2,15 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase'
-import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
-import { PAYMENT_METHODS, SALES_REPS, CASH_HOLDERS } from '@/types'
+import OrdersTable from '@/components/admin/OrdersTable'
 import type { Order } from '@/types'
 
 async function getOrders(): Promise<Order[]> {
   const db = createAdminClient()
   const { data } = await db.from('orders').select('*').order('created_at', { ascending: false })
   return data ?? []
-}
-
-const statusVariant: Record<string, 'green' | 'pink' | 'navy' | 'red'> = {
-  paid: 'pink',
-  fulfilled: 'green',
-  shipped: 'green',
-  out_for_delivery: 'green',
-  pending: 'navy',
-  cancelled: 'red',
 }
 
 export default async function AdminOrdersPage() {
@@ -41,63 +31,7 @@ export default async function AdminOrdersPage() {
           <p className="font-semibold">No orders yet.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-          <table className="w-full min-w-[720px]">
-            <thead className="bg-gray-50 text-xs font-bold text-navy/60 uppercase">
-              <tr>
-                <th className="px-5 py-3 text-left">Order</th>
-                <th className="px-5 py-3 text-left">Customer</th>
-                <th className="px-5 py-3 text-left">Total</th>
-                <th className="px-5 py-3 text-left">Status</th>
-                <th className="px-5 py-3 text-left">Payment</th>
-                <th className="px-5 py-3 text-left">Cash Holder</th>
-                <th className="px-5 py-3 text-left">Sales Rep</th>
-                <th className="px-5 py-3 text-left">Date</th>
-                <th className="px-5 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-4 font-mono text-sm text-navy/70">#{order.id.slice(0, 8).toUpperCase()}</td>
-                  <td className="px-5 py-4">
-                    <p className="font-semibold text-navy text-sm">{order.customer_name}</p>
-                    <p className="text-xs text-navy/50">{order.email}</p>
-                  </td>
-                  <td className="px-5 py-4 font-bold text-navy">${order.total?.toFixed(2)}</td>
-                  <td className="px-5 py-4">
-                    <Badge variant={statusVariant[order.status] ?? 'navy'}>{order.status}</Badge>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-navy/70">
-                    {order.payment_method === 'other'
-                      ? (order.payment_method_other || 'Other')
-                      : order.payment_method
-                        ? (PAYMENT_METHODS.find((m) => m.value === order.payment_method)?.label ?? order.payment_method)
-                        : <span className="text-navy/30">—</span>}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-navy/70">
-                    {order.cash_holder
-                      ? (CASH_HOLDERS.find((h) => h.value === order.cash_holder)?.label ?? order.cash_holder)
-                      : <span className="text-navy/30">—</span>}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-navy/70">
-                    {order.sales_reps && order.sales_reps.length > 0
-                      ? order.sales_reps.map((r) => SALES_REPS.find((sr) => sr.value === r)?.label ?? r).join(', ')
-                      : <span className="text-navy/30">—</span>}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-navy/60">
-                    {new Date(order.created_at).toLocaleDateString('en-US')}
-                  </td>
-                  <td className="px-5 py-4">
-                    <Link href={`/admin/orders/${order.id}`} className="text-purple font-bold text-sm hover:text-pink transition-colors">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <OrdersTable orders={orders} />
       )}
     </div>
   )

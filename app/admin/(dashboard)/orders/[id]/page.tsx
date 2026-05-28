@@ -109,15 +109,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               Edit →
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">Payment Method</p>
-              <p className="text-navy font-semibold">
-                {order.payment_method === 'other'
-                  ? (order.payment_method_other || 'Other')
-                  : (PAYMENT_METHODS.find((m) => m.value === order.payment_method)?.label ?? <span className="text-navy/40 font-normal">— not set —</span>)}
-              </p>
-            </div>
+          <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
               <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">
                 Sales Rep{order.sales_reps && order.sales_reps.length > 1 ? `s (split ${(100 / order.sales_reps.length).toFixed(0)}% each)` : ''}
@@ -126,6 +118,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 {order.sales_reps && order.sales_reps.length > 0
                   ? order.sales_reps.map((r) => SALES_REPS.find((sr) => sr.value === r)?.label ?? r).join(', ')
                   : <span className="text-navy/40 font-normal">— not set —</span>}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">Payment Method</p>
+              <p className="text-navy font-semibold">
+                {order.payment_method === 'other'
+                  ? (order.payment_method_other || 'Other')
+                  : (PAYMENT_METHODS.find((m) => m.value === order.payment_method)?.label ?? <span className="text-navy/40 font-normal">— not set —</span>)}
               </p>
             </div>
             {order.payment_method === 'cash' && (
