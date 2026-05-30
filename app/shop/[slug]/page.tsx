@@ -18,7 +18,10 @@ async function getProduct(slug: string): Promise<ProductWithVariants | null> {
     .eq('slug', slug)
     .eq('active', true)
     .single()
-  return data as ProductWithVariants | null
+  if (!data) return null
+  const product = data as ProductWithVariants
+  product.product_variants = (product.product_variants ?? []).filter((v) => v.active)
+  return product
 }
 
 function absoluteUrl(src: string): string {

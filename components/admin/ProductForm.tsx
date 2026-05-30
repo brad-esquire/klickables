@@ -23,6 +23,7 @@ interface Variant {
   price: string
   stock: string
   sku: string
+  active: boolean
 }
 
 interface ProductFormProps {
@@ -50,7 +51,8 @@ export default function ProductForm({ product }: ProductFormProps) {
       price: v.price.toString(),
       stock: v.stock.toString(),
       sku: v.sku ?? '',
-    })) ?? [{ color: '', size: '', price: '', stock: '0', sku: '' }]
+      active: v.active ?? true,
+    })) ?? [{ color: '', size: '', price: '', stock: '0', sku: '', active: true }]
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -120,14 +122,14 @@ export default function ProductForm({ product }: ProductFormProps) {
   }
 
   function addVariant() {
-    setVariants((v) => [...v, { color: '', size: '', price: '', stock: '0', sku: '' }])
+    setVariants((v) => [...v, { color: '', size: '', price: '', stock: '0', sku: '', active: true }])
   }
 
   function removeVariant(i: number) {
     setVariants((v) => v.filter((_, idx) => idx !== i))
   }
 
-  function updateVariant(i: number, field: keyof Variant, val: string) {
+  function updateVariant(i: number, field: keyof Variant, val: string | boolean) {
     setVariants((v) => v.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
   }
 
@@ -150,6 +152,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         price: parseFloat(v.price),
         stock: parseInt(v.stock),
         sku: v.sku || null,
+        active: v.active,
       })),
     }
 
@@ -318,7 +321,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         </div>
 
         {variants.map((v, i) => (
-          <div key={i} className="grid grid-cols-6 gap-2 items-end border border-gray-100 rounded-xl p-3">
+          <div key={i} className={`grid grid-cols-6 gap-2 items-end border border-gray-100 rounded-xl p-3 ${v.active ? '' : 'bg-gray-50 opacity-70'}`}>
             <div className="col-span-2">
               <label className="block text-xs font-bold text-navy/60 mb-1">Color</label>
               <input value={v.color} onChange={(e) => updateVariant(i, 'color', e.target.value)} placeholder="e.g. Purple" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
@@ -335,13 +338,23 @@ export default function ProductForm({ product }: ProductFormProps) {
               <label className="block text-xs font-bold text-navy/60 mb-1">Stock</label>
               <input type="number" min="0" value={v.stock} onChange={(e) => updateVariant(i, 'stock', e.target.value)} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer" title="Sell on website">
+                <input
+                  type="checkbox"
+                  checked={v.active}
+                  onChange={(e) => updateVariant(i, 'active', e.target.checked)}
+                  className="w-4 h-4 accent-purple"
+                />
+                <span className="text-xs font-bold text-navy/60">Sell</span>
+              </label>
               <button type="button" onClick={() => removeVariant(i)} disabled={variants.length === 1} className="text-gray-300 hover:text-red-500 disabled:opacity-30 transition-colors">
                 <Trash2 size={16} />
               </button>
             </div>
           </div>
         ))}
+        <p className="text-xs text-navy/50">Turn off <strong>Sell</strong> to hide a variant from the shop without losing its order history. Deletion is only allowed if a variant has never been ordered.</p>
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import ProductCard from '@/components/shop/ProductCard'
 import Button from '@/components/ui/Button'
-import type { Product } from '@/types'
+import type { Product, ProductVariant } from '@/types'
 
 export const metadata: Metadata = {
   title: { absolute: 'Klickables — 3D Printed Fidget Clickers' },
@@ -22,7 +22,12 @@ async function getFeaturedProducts(): Promise<Product[]> {
     .eq('active', true)
     .order('sort_order', { ascending: true })
     .limit(8)
-  return data ?? []
+  const products = (data ?? []) as Product[]
+  for (const p of products) {
+    const variants = (p as Product & { product_variants?: ProductVariant[] }).product_variants
+    if (variants) (p as Product & { product_variants?: ProductVariant[] }).product_variants = variants.filter((v) => v.active)
+  }
+  return products
 }
 
 export default async function HomePage() {

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const variantIds = items.map((i) => i.variantId)
     const { data: variants } = await db
       .from('product_variants')
-      .select('id, price, stock, product_id')
+      .select('id, price, stock, product_id, active')
       .in('id', variantIds)
 
     if (!variants) return NextResponse.json({ error: 'Could not verify items' }, { status: 400 })
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       }
       const dbVariant = variants.find((v) => v.id === item.variantId)
       if (!dbVariant) return NextResponse.json({ error: `Item not found` }, { status: 400 })
+      if (!dbVariant.active) return NextResponse.json({ error: `One of the items in your cart is no longer available. Please refresh and try again.` }, { status: 400 })
       if (!ignoreStockMap.get(dbVariant.product_id) && dbVariant.stock < item.quantity) {
         return NextResponse.json({ error: `Insufficient stock` }, { status: 400 })
       }

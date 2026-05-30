@@ -29,13 +29,14 @@ export async function POST(req: NextRequest) {
 
   if (variants?.length) {
     await db.from('product_variants').insert(
-      variants.map((v: { color: string; size: string; price: number; stock: number; sku: string }) => ({
+      variants.map((v: { color: string; size: string; price: number; stock: number; sku: string; active?: boolean }) => ({
         product_id: product.id,
         color: v.color,
         size: v.size,
         price: v.price,
         stock: v.stock,
         sku: v.sku,
+        active: v.active ?? true,
       }))
     )
   }

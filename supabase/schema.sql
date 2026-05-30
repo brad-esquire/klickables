@@ -22,7 +22,8 @@ CREATE TABLE product_variants (
   size text,
   price numeric(10,2) NOT NULL,
   stock integer NOT NULL DEFAULT 0,
-  sku text
+  sku text,
+  active boolean NOT NULL DEFAULT true
 );
 
 -- Orders

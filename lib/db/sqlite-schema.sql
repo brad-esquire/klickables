@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS product_variants (
   size TEXT,
   price REAL NOT NULL,
   stock INTEGER NOT NULL DEFAULT 0,
-  sku TEXT
+  sku TEXT,
+  active INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS orders (

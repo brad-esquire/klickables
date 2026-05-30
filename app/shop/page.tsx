@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabase'
 import ProductCard from '@/components/shop/ProductCard'
 import JsonLd from '@/components/seo/JsonLd'
-import type { Product } from '@/types'
+import type { Product, ProductVariant } from '@/types'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
@@ -25,6 +25,10 @@ async function getProducts(): Promise<Product[]> {
   const custom = customRes.data as Product | null
   if (custom && !products.some((p) => p.slug === 'custom-clicker')) {
     products.push(custom)
+  }
+  for (const p of products) {
+    const variants = (p as Product & { product_variants?: ProductVariant[] }).product_variants
+    if (variants) (p as Product & { product_variants?: ProductVariant[] }).product_variants = variants.filter((v) => v.active)
   }
   return products
 }
