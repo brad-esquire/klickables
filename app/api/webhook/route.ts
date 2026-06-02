@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
         quantity: item.quantity,
         unit_price: item.price,
         customization: c ?? null,
+        personalization_text: item.personalization ?? null,
       })
       return
     }
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
       variant_label: variantLabel || null,
       quantity: item.quantity,
       unit_price: variant?.price ?? item.price,
+      personalization_text: item.personalization ?? null,
     })
 
     if (variant) {

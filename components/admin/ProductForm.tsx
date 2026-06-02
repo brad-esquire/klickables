@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { slugify } from '@/lib/utils'
 import { Trash2, Plus, X, ImagePlus, Loader2, Play, Star } from 'lucide-react'
+import { parseEmojiList } from '@/lib/personalization'
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov)(\?|$)/i.test(url)
@@ -40,6 +41,10 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [description, setDescription] = useState(product?.description ?? '')
   const [active, setActive] = useState(product?.active ?? true)
   const [ignoreStock, setIgnoreStock] = useState(product?.ignore_stock ?? false)
+  const [personalizationEnabled, setPersonalizationEnabled] = useState(product?.personalization_enabled ?? false)
+  const [personalizationMaxLength, setPersonalizationMaxLength] = useState((product?.personalization_max_length ?? 20).toString())
+  const [personalizationEmojis, setPersonalizationEmojis] = useState<string[]>(product?.personalization_emojis ?? [])
+  const [emojiInput, setEmojiInput] = useState('')
   const [images, setImages] = useState<string[]>(product?.images ?? [])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -144,6 +149,9 @@ export default function ProductForm({ product }: ProductFormProps) {
       description,
       active,
       ignore_stock: ignoreStock,
+      personalization_enabled: personalizationEnabled,
+      personalization_max_length: Math.max(1, parseInt(personalizationMaxLength) || 20),
+      personalization_emojis: personalizationEmojis,
       images,
       variants: variants.map((v) => ({
         id: v.id,
@@ -223,6 +231,77 @@ export default function ProductForm({ product }: ProductFormProps) {
             <p className="text-xs text-navy/50 mt-0.5">Customers can still buy this product even if stock reaches zero</p>
           </div>
         </label>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={personalizationEnabled} onChange={(e) => setPersonalizationEnabled(e.target.checked)} className="w-4 h-4 accent-purple" />
+          <div>
+            <span className="font-semibold text-navy text-sm">Allow personalization text</span>
+            <p className="text-xs text-navy/50 mt-0.5">Customers can enter letters/initials at checkout (e.g. for the letter clicker)</p>
+          </div>
+        </label>
+
+        {personalizationEnabled && (
+          <div className="ml-7 space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-navy mb-1">Max characters</label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={personalizationMaxLength}
+                onChange={(e) => setPersonalizationMaxLength(e.target.value)}
+                className="w-24 border-2 border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-purple"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-navy mb-1">
+                Available emojis <span className="font-normal text-navy/40">(optional — buyers can pick from these)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={emojiInput}
+                  onChange={(e) => setEmojiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const parsed = parseEmojiList(emojiInput)
+                      if (parsed.length > 0) {
+                        setPersonalizationEmojis((prev) => {
+                          const seen = new Set(prev)
+                          const next = [...prev]
+                          for (const p of parsed) if (!seen.has(p)) { next.push(p); seen.add(p) }
+                          return next
+                        })
+                        setEmojiInput('')
+                      }
+                    }
+                  }}
+                  placeholder="Paste or type emojis (e.g. ❤️ ⭐ 🌙) then press Enter"
+                  className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-purple"
+                />
+              </div>
+              {personalizationEmojis.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {personalizationEmojis.map((e, i) => (
+                    <button
+                      key={`${e}-${i}`}
+                      type="button"
+                      onClick={() => setPersonalizationEmojis((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="group flex items-center gap-1 border-2 border-gray-200 hover:border-red-400 rounded-full pl-3 pr-2 py-1 text-lg"
+                      title="Click to remove"
+                    >
+                      <span>{e}</span>
+                      <X size={14} className="text-gray-400 group-hover:text-red-500" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-navy/40 mt-2">No emojis yet — buyers will only see the text input.</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Media */}

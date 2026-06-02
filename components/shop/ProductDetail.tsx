@@ -9,6 +9,7 @@ import ImageGallery from './ImageGallery'
 import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
 import { trackViewItem, trackAddToCart } from '@/lib/analytics'
+import { tokenizePersonalization } from '@/lib/personalization'
 
 interface ProductDetailProps {
   product: Product
@@ -21,6 +22,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   )
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const [personalization, setPersonalization] = useState('')
   const addItem = useCartStore((s) => s.addItem)
 
   const variantLabel = [selectedVariant?.color, selectedVariant?.size].filter(Boolean).join(' / ')
@@ -40,6 +42,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
   function handleAddToCart() {
     if (!selectedVariant || !inStock) return
+    const cleanPersonalization = product.personalization_enabled
+      ? tokenizePersonalization(personalization, product.personalization_emojis ?? [], product.personalization_max_length).join('').trim()
+      : ''
     addItem({
       variantId: selectedVariant.id,
       productId: product.id,
@@ -48,7 +53,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       price: selectedVariant.price,
       quantity: qty,
       image: product.images?.[0] ?? '',
+      ...(cleanPersonalization ? { personalization: cleanPersonalization } : {}),
     })
+    setPersonalization('')
     trackAddToCart({
       item_id: selectedVariant.id,
       item_name: product.name,
@@ -90,6 +97,45 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               ignoreStock={product.ignore_stock}
             />
           )}
+
+          {product.personalization_enabled && (() => {
+            const max = product.personalization_max_length
+            const emojis = product.personalization_emojis ?? []
+            const tokens = tokenizePersonalization(personalization, emojis, max)
+            const remaining = max - tokens.length
+            const sanitize = (raw: string) => tokenizePersonalization(raw, emojis, max).join('')
+            return (
+              <div>
+                <label className="block text-sm font-bold text-navy mb-2">
+                  Customize your clicker <span className="font-normal text-navy/50">(up to {max} {max === 1 ? 'key' : 'keys'}{emojis.length > 0 ? ' — letters or emojis' : ''})</span>
+                </label>
+                <input
+                  type="text"
+                  value={personalization}
+                  onChange={(e) => setPersonalization(sanitize(e.target.value))}
+                  placeholder={emojis.length > 0 ? `e.g. BW${emojis[0]}` : 'e.g. BW'}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple"
+                />
+                {emojis.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-navy/60 mr-1">Add emoji:</span>
+                    {emojis.map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        disabled={remaining <= 0}
+                        onClick={() => setPersonalization((prev) => sanitize(prev + e))}
+                        className="w-9 h-9 rounded-full border-2 border-gray-200 hover:border-purple disabled:opacity-30 disabled:hover:border-gray-200 flex items-center justify-center text-lg"
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-navy/40 mt-2">{tokens.length}/{max}</p>
+              </div>
+            )
+          })()}
 
           {/* Quantity */}
           <div className="flex items-center gap-3">

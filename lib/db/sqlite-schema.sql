@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT,
   images TEXT DEFAULT '[]',
   active INTEGER DEFAULT 1,
+  personalization_enabled INTEGER NOT NULL DEFAULT 0,
+  personalization_max_length INTEGER NOT NULL DEFAULT 20,
+  personalization_emojis TEXT NOT NULL DEFAULT '[]',
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -51,7 +54,8 @@ CREATE TABLE IF NOT EXISTS order_items (
   product_name TEXT NOT NULL,
   variant_label TEXT,
   quantity INTEGER NOT NULL,
-  unit_price REAL NOT NULL
+  unit_price REAL NOT NULL,
+  personalization_text TEXT
 );
 
 CREATE TABLE IF NOT EXISTS discount_codes (

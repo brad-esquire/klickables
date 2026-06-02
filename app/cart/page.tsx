@@ -9,7 +9,7 @@ import { Trash2 } from 'lucide-react'
 import { trackViewCart } from '@/lib/analytics'
 
 export default function CartPage() {
-  const { items, removeItem, updateQty } = useCartStore()
+  const { items, removeAt, updateQtyAt } = useCartStore()
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const hydrated = useCartHydrated()
@@ -86,8 +86,8 @@ export default function CartPage() {
       <div className="grid md:grid-cols-3 gap-8">
         {/* Items */}
         <div className="md:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div key={item.variantId} className="flex gap-4 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          {items.map((item, index) => (
+            <div key={index} className="flex gap-4 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-cream flex-shrink-0">
                 {item.image ? (
                   <Image src={item.image} alt={item.productName} fill className="object-cover" sizes="80px" />
@@ -98,16 +98,19 @@ export default function CartPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-navy">{item.productName}</p>
                 {item.variantLabel && <p className="text-sm text-navy/60">{item.variantLabel}</p>}
+                {item.personalization && (
+                  <p className="text-sm text-navy/60">Text: <span className="font-semibold text-navy">{item.personalization}</span></p>
+                )}
                 <p className="font-bold text-pink">${item.price.toFixed(2)} each</p>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <button onClick={() => removeItem(item.variantId)} className="text-gray-400 hover:text-red-500 transition-colors">
+                <button onClick={() => removeAt(index)} className="text-gray-400 hover:text-red-500 transition-colors">
                   <Trash2 size={16} />
                 </button>
                 <div className="flex items-center border border-gray-200 rounded-full overflow-hidden">
-                  <button onClick={() => updateQty(item.variantId, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center text-navy font-bold hover:bg-gray-50">−</button>
+                  <button onClick={() => updateQtyAt(index, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center text-navy font-bold hover:bg-gray-50">−</button>
                   <span className="w-6 text-center text-sm font-bold text-navy">{item.quantity}</span>
-                  <button onClick={() => updateQty(item.variantId, item.quantity + 1)} className="w-7 h-7 flex items-center justify-center text-navy font-bold hover:bg-gray-50">+</button>
+                  <button onClick={() => updateQtyAt(index, item.quantity + 1)} className="w-7 h-7 flex items-center justify-center text-navy font-bold hover:bg-gray-50">+</button>
                 </div>
                 <p className="font-bold text-navy text-sm">${(item.price * item.quantity).toFixed(2)}</p>
               </div>

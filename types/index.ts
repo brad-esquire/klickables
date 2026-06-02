@@ -17,6 +17,9 @@ export interface Product {
   images: string[]
   active: boolean
   ignore_stock: boolean
+  personalization_enabled: boolean
+  personalization_max_length: number
+  personalization_emojis: string[]
   created_at: string
   product_variants?: ProductVariant[]
 }
@@ -49,6 +52,7 @@ export interface OrderItem {
   quantity: number
   unit_price: number
   customization?: CartItemCustomization | null
+  personalization_text?: string | null
 }
 
 export interface ShippingAddress {
@@ -163,6 +167,7 @@ export interface CartItem {
   quantity: number
   image: string
   customization?: CartItemCustomization
+  personalization?: string
 }
 
 export interface SiteSettings {

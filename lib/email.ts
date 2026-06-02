@@ -21,7 +21,7 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
   const itemRows = order.order_items.map((i) => `
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:15px;color:#1B1E4B;">
-        ${i.product_name}${i.variant_label ? `<br><span style="font-size:13px;color:#9655C8;">${i.variant_label}</span>` : ''}
+        ${i.product_name}${i.variant_label ? `<br><span style="font-size:13px;color:#9655C8;">${i.variant_label}</span>` : ''}${i.personalization_text ? `<br><span style="font-size:13px;color:#1B1E4B;">Personalization: <strong>${i.personalization_text}</strong></span>` : ''}
       </td>
       <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;text-align:right;font-size:15px;color:#1B1E4B;white-space:nowrap;">
         ${i.quantity} × $${i.unit_price.toFixed(2)}
@@ -183,7 +183,7 @@ export async function sendOrderConfirmation(order: Order & { order_items: OrderI
 </html>`
 
   const text = `Hi ${order.customer_name},\n\nThanks for your Klickables order!\n\nOrder #${orderNum} — ${orderDate}\n\n${
-    order.order_items.map((i) => `${i.product_name}${i.variant_label ? ` (${i.variant_label})` : ''} × ${i.quantity} — $${(i.unit_price * i.quantity).toFixed(2)}`).join('\n')
+    order.order_items.map((i) => `${i.product_name}${i.variant_label ? ` (${i.variant_label})` : ''}${i.personalization_text ? ` [${i.personalization_text}]` : ''} × ${i.quantity} — $${(i.unit_price * i.quantity).toFixed(2)}`).join('\n')
   }\n\n${order.discount_amount ? `Subtotal: $${order.subtotal?.toFixed(2)}\nDiscount: -$${order.discount_amount.toFixed(2)}\n` : ''}${!isPickup ? `Shipping: ${order.shipping_cost === 0 ? 'FREE' : `$${order.shipping_cost?.toFixed(2)}`}\n` : ''}Total: $${order.total?.toFixed(2)}\n\n${
     isPickup
       ? `Pickup at: ${order.pickup_location}\nWe'll contact you when your order is ready!`

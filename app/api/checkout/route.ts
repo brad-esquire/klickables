@@ -73,8 +73,10 @@ export async function POST(req: NextRequest) {
 
     // Strip cart down to only what the webhook needs (image/variantLabel not used server-side)
     // and chunk across multiple metadata keys — Stripe limits each value to 500 chars
-    const compactCart = items.map(({ variantId, productName, price, quantity, customization }) => ({
-      variantId, productName, price, quantity, ...(customization ? { customization } : {}),
+    const compactCart = items.map(({ variantId, productName, price, quantity, customization, personalization }) => ({
+      variantId, productName, price, quantity,
+      ...(customization ? { customization } : {}),
+      ...(personalization ? { personalization } : {}),
     }))
     const cartJson = JSON.stringify(compactCart)
     const CHUNK = 490

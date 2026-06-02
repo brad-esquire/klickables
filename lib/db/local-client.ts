@@ -34,13 +34,14 @@ const RELATIONS: Record<string, Record<string, RelationDef>> = {
 // Fields stored as JSON text that need parsing on read
 const JSON_FIELDS: Record<string, string[]> = {
   orders: ['shipping_address', 'sales_reps'],
-  products: ['images'],
+  products: ['images', 'personalization_emojis'],
   order_items: ['customization'],
 }
 
 // Fields stored as 0/1 integers that need coercion to boolean
 const BOOL_FIELDS: Record<string, string[]> = {
-  products: ['active'],
+  products: ['active', 'ignore_stock', 'personalization_enabled'],
+  product_variants: ['active'],
   discount_codes: ['active'],
 }
 

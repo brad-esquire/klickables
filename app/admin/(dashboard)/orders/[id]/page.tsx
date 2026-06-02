@@ -150,7 +150,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <div className="space-y-2">
             {order.order_items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-navy">{item.product_name} {item.variant_label ? `(${item.variant_label})` : ''} × {item.quantity}</span>
+                <div className="text-navy">
+                  <p>{item.product_name} {item.variant_label ? `(${item.variant_label})` : ''} × {item.quantity}</p>
+                  {item.personalization_text && (
+                    <p className="text-xs text-navy/60 mt-0.5">Personalization: <span className="font-semibold text-navy">{item.personalization_text}</span></p>
+                  )}
+                </div>
                 <span className="font-semibold text-navy">${(item.unit_price * item.quantity).toFixed(2)}</span>
               </div>
             ))}

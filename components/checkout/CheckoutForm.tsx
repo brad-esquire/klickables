@@ -156,9 +156,12 @@ export default function CheckoutForm() {
       <div className="order-2 md:order-1">
         <h2 className="font-black text-navy text-lg mb-4">Order Summary</h2>
         <div className="space-y-2 bg-cream rounded-2xl p-5 text-sm">
-          {items.map((item) => (
-            <div key={item.variantId} className="flex justify-between">
-              <span className="text-navy">{item.productName} {item.variantLabel ? `(${item.variantLabel})` : ''} × {item.quantity}</span>
+          {items.map((item, index) => (
+            <div key={index} className="flex justify-between">
+              <span className="text-navy">
+                {item.productName} {item.variantLabel ? `(${item.variantLabel})` : ''} × {item.quantity}
+                {item.personalization && <span className="text-navy/60"> — “{item.personalization}”</span>}
+              </span>
               <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}

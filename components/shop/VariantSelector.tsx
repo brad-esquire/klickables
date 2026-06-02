@@ -50,12 +50,17 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
               const isGlow = key.startsWith('glow in the dark')
               const baseKey = isGlow ? key.replace('glow in the dark', '').trim() : key
               const gradient = GRADIENT_MAP[baseKey]
-              const hex = COLOR_MAP[baseKey] ?? '#ccc'
+              const hex = COLOR_MAP[baseKey]
+              // If the label doesn't map to a known color/gradient and isn't mystery/glow,
+              // treat it as a glyph (emoji, heart, star, letter) and render the text itself.
+              const isGlyph = !gradient && !hex && !isMystery && !isGlow
 
-              const swatchStyle = {
-                ...(gradient ? { background: gradient } : { backgroundColor: hex }),
-                ...(isGlow ? { boxShadow: '0 0 10px 3px rgba(132, 255, 153, 0.9)' } : {}),
-              }
+              const swatchStyle = isGlyph
+                ? { backgroundColor: '#F3F4F6' }
+                : {
+                    ...(gradient ? { background: gradient } : { backgroundColor: hex ?? '#ccc' }),
+                    ...(isGlow ? { boxShadow: '0 0 10px 3px rgba(132, 255, 153, 0.9)' } : {}),
+                  }
 
               return (
                 <button
@@ -69,12 +74,13 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
                     if (match) onSelect(match)
                   }}
                   className={cn(
-                    'w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center',
+                    'w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center leading-none',
                     isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110'
                   )}
                   style={swatchStyle}
                 >
                   {isMystery && <span className="text-white text-sm font-black drop-shadow">?</span>}
+                  {isGlyph && <span className="text-base text-navy font-bold">{color}</span>}
                 </button>
               )
             })}

@@ -10,6 +10,9 @@ CREATE TABLE products (
   images text[] DEFAULT '{}',
   active boolean DEFAULT true,
   ignore_stock boolean NOT NULL DEFAULT false,
+  personalization_enabled boolean NOT NULL DEFAULT false,
+  personalization_max_length integer NOT NULL DEFAULT 20,
+  personalization_emojis text[] NOT NULL DEFAULT '{}',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -59,7 +62,8 @@ CREATE TABLE order_items (
   variant_label text,
   quantity integer NOT NULL,
   unit_price numeric(10,2) NOT NULL,
-  customization jsonb
+  customization jsonb,
+  personalization_text text
 );
 
 -- Discount codes

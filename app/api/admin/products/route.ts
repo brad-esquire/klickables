@@ -16,12 +16,19 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, slug, description, active, ignore_stock, images, variants } = body
+  const { name, slug, description, active, ignore_stock, images, variants, personalization_enabled, personalization_max_length, personalization_emojis } = body
 
   const db = createAdminClient()
   const { data: product, error } = await db
     .from('products')
-    .insert({ name, slug, description, active, ignore_stock: ignore_stock ?? false, images: images ?? [] })
+    .insert({
+      name, slug, description, active,
+      ignore_stock: ignore_stock ?? false,
+      personalization_enabled: personalization_enabled ?? false,
+      personalization_max_length: personalization_max_length ?? 20,
+      personalization_emojis: Array.isArray(personalization_emojis) ? personalization_emojis : [],
+      images: images ?? [],
+    })
     .select()
     .single()
 

@@ -8,8 +8,8 @@ import type { CartItem } from '@/types'
 interface CartStore {
   items: CartItem[]
   addItem: (item: CartItem) => void
-  removeItem: (variantId: string) => void
-  updateQty: (variantId: string, qty: number) => void
+  removeAt: (index: number) => void
+  updateQtyAt: (index: number, qty: number) => void
   clearCart: () => void
 }
 
@@ -19,13 +19,18 @@ export const useCartStore = create<CartStore>()(
       items: [],
 
       addItem: (incoming) => {
-        const existing = get().items.find((i) => i.variantId === incoming.variantId)
-        if (existing && !incoming.customization && !existing.customization) {
+        // Items with a customization or personalization always get their own line —
+        // merging would collapse distinct buyer inputs (e.g. "BW" and "AB").
+        const isUnique = !!incoming.customization || !!incoming.personalization
+        const existingIndex = isUnique
+          ? -1
+          : get().items.findIndex(
+              (i) => i.variantId === incoming.variantId && !i.customization && !i.personalization
+            )
+        if (existingIndex >= 0) {
           set((s) => ({
-            items: s.items.map((i) =>
-              i.variantId === incoming.variantId
-                ? { ...i, quantity: i.quantity + incoming.quantity }
-                : i
+            items: s.items.map((i, idx) =>
+              idx === existingIndex ? { ...i, quantity: i.quantity + incoming.quantity } : i
             ),
           }))
         } else {
@@ -33,16 +38,16 @@ export const useCartStore = create<CartStore>()(
         }
       },
 
-      removeItem: (variantId) =>
-        set((s) => ({ items: s.items.filter((i) => i.variantId !== variantId) })),
+      removeAt: (index) =>
+        set((s) => ({ items: s.items.filter((_, i) => i !== index) })),
 
-      updateQty: (variantId, qty) => {
+      updateQtyAt: (index, qty) => {
         if (qty <= 0) {
-          get().removeItem(variantId)
+          get().removeAt(index)
           return
         }
         set((s) => ({
-          items: s.items.map((i) => (i.variantId === variantId ? { ...i, quantity: qty } : i)),
+          items: s.items.map((it, i) => (i === index ? { ...it, quantity: qty } : it)),
         }))
       },
 

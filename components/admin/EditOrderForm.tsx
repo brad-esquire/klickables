@@ -19,6 +19,7 @@ interface LineItemRow {
   productName: string
   variantLabel: string | null
   customization: CartItemCustomization | null
+  personalizationText: string | null
 }
 
 function getVariantLabel(v: ProductVariant): string {
@@ -66,6 +67,7 @@ export default function EditOrderForm({ order }: Props) {
         productName: item.product_name,
         variantLabel: item.variant_label,
         customization,
+        personalizationText: item.personalization_text ?? null,
       }
     })
   )
@@ -104,7 +106,7 @@ export default function EditOrderForm({ order }: Props) {
     setLineItems((rows) => [...rows, {
       rowId: crypto.randomUUID(), productId: '', variantId: '',
       quantity: '1', unitPrice: 0,
-      isCustom: false, productName: '', variantLabel: null, customization: null,
+      isCustom: false, productName: '', variantLabel: null, customization: null, personalizationText: null,
     }])
   }
 
@@ -164,6 +166,7 @@ export default function EditOrderForm({ order }: Props) {
           customization: row.customization,
           quantity: parseInt(row.quantity),
           unit_price: row.unitPrice,
+          personalization_text: row.personalizationText,
         }
       }
       const product = products.find((p) => p.id === row.productId)
@@ -175,6 +178,7 @@ export default function EditOrderForm({ order }: Props) {
         variant_label: variant ? (getVariantLabel(variant) || null) : null,
         quantity: parseInt(row.quantity),
         unit_price: row.unitPrice,
+        personalization_text: row.personalizationText,
       }
     })
 
