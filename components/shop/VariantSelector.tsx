@@ -22,6 +22,9 @@ const COLOR_MAP: Record<string, string> = {
   white: '#F3F4F6',
   black: '#000000',
   navy: '#1B1E4B',
+  strawberry: '#F8B5C7',
+  chocolate: '#6F4E37',
+  vanilla: '#F3F4F6',
 }
 
 const GRADIENT_MAP: Record<string, string> = {
@@ -52,35 +55,56 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
               const gradient = GRADIENT_MAP[baseKey]
               const hex = COLOR_MAP[baseKey]
               // If the label doesn't map to a known color/gradient and isn't mystery/glow,
-              // treat it as a glyph (emoji, heart, star, letter) and render the text itself.
+              // it's a glyph (emoji, heart, star) — render compactly as just the glyph.
               const isGlyph = !gradient && !hex && !isMystery && !isGlow
 
-              const swatchStyle = isGlyph
-                ? { backgroundColor: '#F3F4F6' }
-                : {
-                    ...(gradient ? { background: gradient } : { backgroundColor: hex ?? '#ccc' }),
-                    ...(isGlow ? { boxShadow: '0 0 10px 3px rgba(132, 255, 153, 0.9)' } : {}),
-                  }
+              const onClick = () => {
+                const match = variants.find(
+                  (v) => v.color === color &&
+                    (sizes.length === 0 || v.size === variants.find(x => x.id === selectedId)?.size)
+                ) ?? variants.find((v) => v.color === color)
+                if (match) onSelect(match)
+              }
+
+              if (isGlyph) {
+                return (
+                  <button
+                    key={color}
+                    title={color}
+                    onClick={onClick}
+                    className={cn(
+                      'w-9 h-9 rounded-full border-2 bg-gray-100 transition-all flex items-center justify-center leading-none text-lg',
+                      isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110'
+                    )}
+                  >
+                    {color}
+                  </button>
+                )
+              }
+
+              const dotStyle = {
+                ...(gradient ? { background: gradient } : { backgroundColor: hex ?? '#ccc' }),
+                ...(isGlow ? { boxShadow: '0 0 8px 2px rgba(132, 255, 153, 0.9)' } : {}),
+              }
 
               return (
                 <button
                   key={color}
-                  title={color}
-                  onClick={() => {
-                    const match = variants.find(
-                      (v) => v.color === color &&
-                        (sizes.length === 0 || v.size === variants.find(x => x.id === selectedId)?.size)
-                    ) ?? variants.find((v) => v.color === color)
-                    if (match) onSelect(match)
-                  }}
+                  onClick={onClick}
                   className={cn(
-                    'w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center leading-none',
-                    isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110'
+                    'flex items-center gap-2 rounded-full border-2 pl-1.5 pr-3.5 py-1 text-sm font-bold transition-colors',
+                    isSelected
+                      ? 'border-navy bg-navy/5 text-navy'
+                      : 'border-gray-200 hover:border-navy text-navy'
                   )}
-                  style={swatchStyle}
                 >
-                  {isMystery && <span className="text-white text-sm font-black drop-shadow">?</span>}
-                  {isGlyph && <span className="text-base text-navy font-bold">{color}</span>}
+                  <span
+                    className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center"
+                    style={dotStyle}
+                  >
+                    {isMystery && <span className="text-white text-[10px] font-black drop-shadow">?</span>}
+                  </span>
+                  <span>{color}</span>
                 </button>
               )
             })}
