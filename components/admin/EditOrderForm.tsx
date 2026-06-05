@@ -199,7 +199,7 @@ export default function EditOrderForm({ order }: Props) {
         discount_code: discountCode.trim() || null,
         payment_method: paymentMethod || null,
         payment_method_other: paymentMethod === 'other' ? (paymentMethodOther.trim() || null) : null,
-        cash_holder: paymentMethod === 'cash' ? (cashHolder || null) : null,
+        cash_holder: (paymentMethod === 'cash' || paymentMethod === 'other') ? (cashHolder || null) : null,
         sales_reps: salesReps,
         line_items,
       }),
@@ -420,9 +420,9 @@ export default function EditOrderForm({ order }: Props) {
             <input value={paymentMethodOther} onChange={(e) => setPaymentMethodOther(e.target.value)} className={inputCls} placeholder="e.g. Bank transfer, Cheque" />
           </div>
         )}
-        {paymentMethod === 'cash' && (
+        {(paymentMethod === 'cash' || paymentMethod === 'other') && (
           <div>
-            <label className={labelCls}>Cash Holder <span className="font-normal text-navy/40">(who physically has the cash)</span></label>
+            <label className={labelCls}>Cash Holder <span className="font-normal text-navy/40">(who physically has the money)</span></label>
             <select value={cashHolder} onChange={(e) => setCashHolder(e.target.value as CashHolder | '')} className={inputCls}>
               <option value="">Select…</option>
               {CASH_HOLDERS.map((h) => (

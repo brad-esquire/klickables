@@ -76,41 +76,12 @@ export default function ProductForm({ product }: ProductFormProps) {
     setUploading(true)
 
     try {
-      let url: string
-
-      if (process.env.NEXT_PUBLIC_USE_LOCAL_UPLOAD === 'true') {
-        // Local dev: send file through the API route (no Netlify size limit)
-        const fd = new FormData()
-        fd.append('image', file)
-        const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
-        const data = await res.json()
-        if (!res.ok) { setUploadError(data.error ?? 'Upload failed'); return }
-        url = data.url
-      } else {
-        // Production: get a presigned URL then upload directly to Supabase
-        // so the file never passes through the Netlify function body limit
-        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
-        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
-        const urlRes = await fetch('/api/admin/upload-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contentType: file.type, size: file.size, filename }),
-        })
-        const urlData = await urlRes.json()
-        if (!urlRes.ok) { setUploadError(urlData.error ?? 'Upload failed'); return }
-
-        const uploadRes = await fetch(urlData.uploadUrl, {
-          method: 'PUT',
-          body: file,
-          headers: { 'Content-Type': file.type },
-        })
-        if (!uploadRes.ok) { setUploadError('Storage upload failed — please try again'); return }
-
-        url = urlData.publicUrl
-      }
-
-      setImages((imgs) => [...imgs, url])
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) { setUploadError(data.error ?? 'Upload failed'); return }
+      setImages((imgs) => [...imgs, data.url])
     } catch {
       setUploadError('Upload failed — please check your connection and try again')
     } finally {
@@ -307,7 +278,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       {/* Media */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
         <h2 className="font-black text-navy">Product Media</h2>
-        <p className="text-xs text-navy/50">Hover an image and click the ★ to set it as the main image shown in the shop. Add videos (MP4, WebM, MOV — up to 50 MB) to show the clicker in action. Images up to 5 MB (JPEG, PNG, WebP, GIF).</p>
+        <p className="text-xs text-navy/50">Hover an image and click the ★ to set it as the main image shown in the shop. Add short clips (MP4, WebM, MOV) or animated GIFs to show the clicker in action. All files up to 5.5 MB — compress longer videos first.</p>
 
         <div className="grid grid-cols-3 gap-3">
           {images.map((url, i) => (

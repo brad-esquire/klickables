@@ -52,7 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     discount_code: discount_code ?? null,
     payment_method: payment_method || null,
     payment_method_other: payment_method === 'other' ? (payment_method_other?.trim() || null) : null,
-    cash_holder: payment_method === 'cash' ? (cash_holder || null) : null,
+    cash_holder: (payment_method === 'cash' || payment_method === 'other') ? (cash_holder || null) : null,
     sales_reps: Array.isArray(sales_reps) ? sales_reps : [],
   }
   if (status === 'fulfilled') orderUpdate.fulfilled_at = new Date().toISOString()

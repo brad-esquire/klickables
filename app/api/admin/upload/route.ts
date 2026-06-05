@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { getStore } from '@netlify/blobs'
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024   // 5 MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024  // 50 MB
+const ALLOWED_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+]
+
+// Netlify Functions cap incoming request bodies at ~6 MB. We sit just below that.
+const MAX_SIZE = 5.5 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -18,40 +21,28 @@ export async function POST(req: NextRequest) {
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json({ error: 'Only JPEG, PNG, WebP, GIF, MP4, WebM or MOV files are allowed' }, { status: 400 })
   }
-  const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type)
-  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
-  if (file.size > maxSize) {
-    return NextResponse.json({ error: `${isVideo ? 'Videos' : 'Images'} must be under ${isVideo ? '50' : '5'} MB` }, { status: 400 })
+  if (file.size > MAX_SIZE) {
+    return NextResponse.json({ error: 'File must be under 5.5 MB. For longer videos, please compress first.' }, { status: 400 })
   }
 
   const bytes = await file.arrayBuffer()
-  const buffer = Buffer.from(bytes)
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
+  // Dev: write to public/uploads so the local SQLite + filesystem flow keeps working
+  // without needing Netlify creds.
   if (process.env.USE_LOCAL_DB === 'true') {
     const { writeFile, mkdir } = await import('fs/promises')
     const { join } = await import('path')
+    const buffer = Buffer.from(bytes)
     const uploadDir = join(process.cwd(), 'public', 'uploads')
     await mkdir(uploadDir, { recursive: true })
     await writeFile(join(uploadDir, filename), buffer)
     return NextResponse.json({ url: `/uploads/${filename}` })
   }
 
-  // Production: Supabase Storage
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-
-  const { error } = await supabase.storage
-    .from('product-images')
-    .upload(filename, buffer, { contentType: file.type, upsert: false })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(filename)
-  return NextResponse.json({ url: publicUrl })
+  // Prod: write to Netlify Blobs. The site-scoped store survives deploys.
+  const store = getStore({ name: 'media' })
+  await store.set(filename, bytes, { metadata: { contentType: file.type } })
+  return NextResponse.json({ url: `/api/media/${filename}` })
 }

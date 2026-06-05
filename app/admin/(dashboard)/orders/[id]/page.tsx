@@ -128,7 +128,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   : (PAYMENT_METHODS.find((m) => m.value === order.payment_method)?.label ?? <span className="text-navy/40 font-normal">— not set —</span>)}
               </p>
             </div>
-            {order.payment_method === 'cash' && (
+            {(order.payment_method === 'cash' || order.payment_method === 'other') && (
               <div>
                 <p className="text-xs font-bold text-navy/50 uppercase tracking-wide mb-1">Cash Holder</p>
                 <p className="text-navy font-semibold">
