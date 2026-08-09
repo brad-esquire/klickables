@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createAdminClient } from '@/lib/supabase'
-import { Package, ShoppingBag, AlertTriangle, TrendingUp, Wallet, Users, Trophy, BarChart3 } from 'lucide-react'
+import { Package, ShoppingBag, AlertTriangle, TrendingUp, Wallet, Users, Trophy, BarChart3, MousePointerClick } from 'lucide-react'
 import { PAYMENT_METHODS, SALES_REPS } from '@/types'
 import { variantLabel } from '@/lib/variants'
 
@@ -84,9 +84,11 @@ async function getDashboardStats() {
   const currentName = new Map((products ?? []).map((p: { id: string; name: string }) => [p.id, p.name]))
   const unitsByProduct = new Map<string, { name: string; units: number }>()
   const unitsByMonth = new Map<string, number>()
+  let lifetimeUnits = 0
   for (const it of (soldItems ?? []) as unknown as SoldItem[]) {
     if (!SALE_STATUSES.includes(it.orders?.status ?? '')) continue
     const qty = it.quantity ?? 0
+    lifetimeUnits += qty
     const key = it.product_id ?? `name:${it.product_name ?? 'unknown'}`
     const name = (it.product_id && currentName.get(it.product_id)) || it.product_name || 'Unknown product'
     const prev = unitsByProduct.get(key)
@@ -116,6 +118,7 @@ async function getDashboardStats() {
   return {
     totalOrders: totalOrders ?? 0,
     pendingOrders: pendingOrders ?? 0,
+    lifetimeUnits,
     totalRevenue,
     totalExpenses,
     netIncome,
@@ -128,7 +131,7 @@ async function getDashboardStats() {
 }
 
 export default async function AdminDashboard() {
-  const { totalOrders, pendingOrders, totalRevenue, totalExpenses, netIncome, lowStock, byPaymentMethod, bySalesRep, topProducts, monthlySales } = await getDashboardStats()
+  const { totalOrders, pendingOrders, lifetimeUnits, totalRevenue, totalExpenses, netIncome, lowStock, byPaymentMethod, bySalesRep, topProducts, monthlySales } = await getDashboardStats()
 
   const isProfit = netIncome >= 0
   const maxMethodAmount = Math.max(1, ...byPaymentMethod.map((x) => x.amount))
@@ -141,7 +144,7 @@ export default async function AdminDashboard() {
     <div>
       <h1 className="text-3xl font-black text-navy mb-8">Dashboard</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         {/* Total Orders */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-2">
@@ -149,6 +152,15 @@ export default async function AdminDashboard() {
             <ShoppingBag size={20} className="text-purple" />
           </div>
           <p className="text-3xl font-black text-navy">{totalOrders}</p>
+        </div>
+
+        {/* Clickers Sold */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-navy/60">Clickers Sold</p>
+            <MousePointerClick size={20} className="text-sky" />
+          </div>
+          <p className="text-3xl font-black text-navy">{lifetimeUnits}</p>
         </div>
 
         {/* Awaiting Fulfillment */}
