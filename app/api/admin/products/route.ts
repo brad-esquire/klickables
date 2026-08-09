@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   if (variants?.length) {
     await db.from('product_variants').insert(
-      variants.map((v: { color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; personalization_max_length?: number | null }) => ({
+      variants.map((v: { color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; sort_order?: number; personalization_max_length?: number | null }) => ({
         product_id: product.id,
         color: v.color ?? null,
         variant_name: v.variant_name ?? null,
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         stock: v.stock,
         sku: v.sku,
         active: v.active ?? true,
+        sort_order: v.sort_order ?? 0,
         personalization_max_length: v.personalization_max_length ?? null,
       }))
     )

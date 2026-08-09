@@ -12,6 +12,8 @@ export interface ProductVariant {
   stock: number
   sku: string | null
   active: boolean
+  // Admin-controlled order of the variant option (shared by all its colors).
+  sort_order: number
   // Overrides the product's personalization_max_length for this variant when
   // set (e.g. a "Three Letter" nameplate caps personalization at 3). Null =
   // use the product-level max.

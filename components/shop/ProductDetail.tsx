@@ -17,7 +17,7 @@ interface ProductDetailProps {
 }
 
 export default function ProductDetail({ product }: ProductDetailProps) {
-  const variants = product.product_variants ?? []
+  const variants = [...(product.product_variants ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   // Two independent axes: cosmetic colors and the priced variant axis. A row is
   // one (color × variant_name) combination.
   const colors = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[]

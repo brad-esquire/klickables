@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   // id, or — when the grid regenerated rows without ids after a structural change —
   // adopted by natural key (variant_name × color), so an ordered combination is reused
   // rather than duplicated.
-  const incoming = (variants ?? []) as { id?: string; color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; personalization_max_length?: number | null }[]
+  const incoming = (variants ?? []) as { id?: string; color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; sort_order?: number; personalization_max_length?: number | null }[]
   const naturalKey = (r: { variant_name?: string | null; color?: string | null }) => `${r.variant_name ?? ''}||${r.color ?? ''}`
 
   const { data: existing } = await db.from('product_variants').select('id, color, variant_name').eq('product_id', id)
@@ -70,7 +70,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   // Update matched/adopted rows; insert genuinely new combinations.
   for (const v of resolved) {
-    const payload = { product_id: id, color: v.color ?? null, variant_name: v.variant_name ?? null, price: v.price, stock: v.stock, sku: v.sku, active: v.active ?? true, personalization_max_length: v.personalization_max_length ?? null }
+    const payload = { product_id: id, color: v.color ?? null, variant_name: v.variant_name ?? null, price: v.price, stock: v.stock, sku: v.sku, active: v.active ?? true, sort_order: v.sort_order ?? 0, personalization_max_length: v.personalization_max_length ?? null }
     if (v.id) {
       await db.from('product_variants').update(payload).eq('id', v.id)
     } else {

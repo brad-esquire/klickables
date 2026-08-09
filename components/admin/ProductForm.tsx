@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { slugify } from '@/lib/utils'
-import { Trash2, Plus, X, ImagePlus, Loader2, Play, Star } from 'lucide-react'
+import { Trash2, Plus, X, ImagePlus, Loader2, Play, Star, GripVertical } from 'lucide-react'
 import { parseEmojiList } from '@/lib/personalization'
 
 function isVideoUrl(url: string) {
@@ -39,7 +39,12 @@ const cellKey = (variantKey: string, color: string) => `${variantKey}||${color}`
 // Derive the form's variant/color/inventory state from a product's rows.
 function buildVariantState(product?: Product & { product_variants?: ProductVariant[] }) {
   const rows = product?.product_variants ?? []
-  const names = [...new Set(rows.map((r) => r.variant_name).filter(Boolean))] as string[]
+  // Variant options ordered by their admin-set sort_order (first row wins per name).
+  const nameOrder = new Map<string, number>()
+  for (const r of rows) {
+    if (r.variant_name && !nameOrder.has(r.variant_name)) nameOrder.set(r.variant_name, r.sort_order ?? 0)
+  }
+  const names = [...nameOrder.keys()].sort((a, b) => (nameOrder.get(a) ?? 0) - (nameOrder.get(b) ?? 0))
   const colors = [...new Set(rows.map((r) => r.color).filter(Boolean))] as string[]
   const defs: VariantDef[] = names.map((name, idx) => {
     const row = rows.find((r) => r.variant_name === name)!
@@ -97,6 +102,17 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [cells, setCells] = useState<Record<string, Cell>>(init.cells)
   const [colorInput, setColorInput] = useState('')
   const keyCounter = useRef(init.nextKey)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [overIndex, setOverIndex] = useState<number | null>(null)
+
+  function moveVariantDef(from: number, to: number) {
+    setVariantDefs((d) => {
+      const arr = [...d]
+      const [moved] = arr.splice(from, 1)
+      arr.splice(to, 0, moved)
+      return arr
+    })
+  }
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -174,9 +190,11 @@ export default function ProductForm({ product }: ProductFormProps) {
     e.preventDefault()
     setError('')
 
-    // Expand variants × colors into one row per combination.
+    // Expand variants × colors into one row per combination. Each row carries the
+    // variant option's position (sort_order) so its display order is preserved.
     const rows = []
-    for (const def of defList) {
+    for (let di = 0; di < defList.length; di++) {
+      const def = defList[di]
       const price = def ? parseFloat(def.price) : parseFloat(basePrice)
       if (!Number.isFinite(price)) {
         setError(def ? `Set a price for the "${def.name || 'unnamed'}" variant.` : 'Set a product price.')
@@ -192,6 +210,7 @@ export default function ProductForm({ product }: ProductFormProps) {
           stock: parseInt(cell.stock) || 0,
           sku: cell.sku.trim() || null,
           active: cell.active,
+          sort_order: di,
           personalization_max_length:
             def && def.personalizationMax.trim() ? Math.max(1, parseInt(def.personalizationMax)) : null,
         })
@@ -488,8 +507,23 @@ export default function ProductForm({ product }: ProductFormProps) {
                   className="w-64 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple"
                 />
               </div>
-              {variantDefs.map((def) => (
-                <div key={def.key} className="flex items-end gap-2">
+              {variantDefs.map((def, i) => (
+                <div
+                  key={def.key}
+                  onDragEnter={() => { if (dragIndex !== null && dragIndex !== i) setOverIndex(i) }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { if (dragIndex !== null && dragIndex !== i) moveVariantDef(dragIndex, i); setDragIndex(null); setOverIndex(null) }}
+                  className={`flex items-end gap-2 rounded-lg ${dragIndex === i ? 'opacity-40' : ''} ${overIndex === i && dragIndex !== i ? 'ring-2 ring-purple' : ''}`}
+                >
+                  <span
+                    draggable
+                    onDragStart={() => setDragIndex(i)}
+                    onDragEnd={() => { setDragIndex(null); setOverIndex(null) }}
+                    className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 mb-2.5 shrink-0"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical size={16} />
+                  </span>
                   <div className="flex-1">
                     <label className="block text-xs font-bold text-navy/60 mb-1">Name</label>
                     <input value={def.name} onChange={(e) => updateVariantDef(def.key, 'name', e.target.value)} placeholder="e.g. 3 letter" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
@@ -509,7 +543,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                   </button>
                 </div>
               ))}
-              <p className="text-xs text-navy/50">Price is set per variant and applies to all of its colors.</p>
+              <p className="text-xs text-navy/50">Price is set per variant and applies to all of its colors. Drag the <GripVertical size={12} className="inline align-text-bottom" /> handle to set the order shoppers see.</p>
             </>
           )}
         </div>

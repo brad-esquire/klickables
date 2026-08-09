@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS product_variants (
   stock INTEGER NOT NULL DEFAULT 0,
   sku TEXT,
   active INTEGER NOT NULL DEFAULT 1,
+  -- Admin-controlled order of the variant option (shared by all its colors).
+  sort_order INTEGER NOT NULL DEFAULT 0,
   -- Overrides products.personalization_max_length for this variant when set
   -- (e.g. a "Three Letter" nameplate caps personalization at 3). NULL = inherit.
   personalization_max_length INTEGER
