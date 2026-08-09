@@ -47,7 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="p-4">
         <h3 className="font-bold text-navy text-lg leading-tight mb-1">{product.name}</h3>
         {isCustom ? (
-          <p className="text-pink font-bold text-base">From $100.00</p>
+          <p className="text-pink font-bold text-base">$2.00 each</p>
         ) : lowestPrice !== null ? (
           <p className="text-pink font-bold text-base">
             {product.product_variants && product.product_variants.length > 1 ? 'From ' : ''}
