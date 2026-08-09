@@ -14,6 +14,7 @@ interface Product {
   slug: string
   active: boolean
   sort_order: number
+  sold: number
   product_variants?: Variant[]
 }
 
@@ -94,6 +95,7 @@ export default function ProductSortList({ initialProducts }: { initialProducts: 
             <th className="px-3 py-3 w-8" />
             <th className="px-5 py-3 text-left">Product</th>
             <th className="px-5 py-3 text-left hidden sm:table-cell">Variants</th>
+            <th className="px-5 py-3 text-right">Sold</th>
             <th className="px-5 py-3 text-left">Status</th>
             <th className="px-5 py-3 text-right">Actions</th>
           </tr>
@@ -140,6 +142,9 @@ export default function ProductSortList({ initialProducts }: { initialProducts: 
                 <td className="px-5 py-4 text-sm text-navy/70 hidden sm:table-cell">
                   {p.product_variants?.length ?? 0} variant
                   {(p.product_variants?.length ?? 0) !== 1 ? 's' : ''} · {priceLabel}
+                </td>
+                <td className="px-5 py-4 text-right text-sm font-semibold text-navy tabular-nums">
+                  {p.sold}
                 </td>
                 <td className="px-5 py-4">
                   <Badge variant={p.active ? 'green' : 'red'}>{p.active ? 'Active' : 'Hidden'}</Badge>

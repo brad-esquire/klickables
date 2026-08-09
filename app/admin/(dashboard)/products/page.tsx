@@ -5,13 +5,25 @@ import { createAdminClient } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import ProductSortList from '@/components/admin/ProductSortList'
 
+// Orders that count as an actual sale (excludes pending/cancelled).
+const SALE_STATUSES = ['paid', 'fulfilled', 'shipped', 'out_for_delivery']
+
 async function getProducts() {
   const db = createAdminClient()
-  const { data } = await db
-    .from('products')
-    .select('*, product_variants(*)')
-    .order('sort_order', { ascending: true })
-  return data ?? []
+  const [{ data }, { data: soldItems }] = await Promise.all([
+    db.from('products').select('*, product_variants(*)').order('sort_order', { ascending: true }),
+    db.from('order_items').select('order_id, product_id, quantity, orders(status)'),
+  ])
+
+  // Lifetime units sold per product across completed orders.
+  type SoldItem = { product_id: string | null; quantity: number | null; orders: { status: string | null } | null }
+  const soldByProduct = new Map<string, number>()
+  for (const it of (soldItems ?? []) as unknown as SoldItem[]) {
+    if (!it.product_id || !SALE_STATUSES.includes(it.orders?.status ?? '')) continue
+    soldByProduct.set(it.product_id, (soldByProduct.get(it.product_id) ?? 0) + (it.quantity ?? 0))
+  }
+
+  return (data ?? []).map((p) => ({ ...p, sold: soldByProduct.get(p.id) ?? 0 }))
 }
 
 export default async function AdminProductsPage() {
