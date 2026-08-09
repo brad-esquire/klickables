@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase'
+import { variantLabel } from '@/lib/variants'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -15,12 +16,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const { name, slug, description, active, ignore_stock, images, variants, personalization_enabled, personalization_max_length, personalization_emojis } = await req.json()
+  const { name, slug, description, active, ignore_stock, images, variants, variant_label, personalization_enabled, personalization_max_length, personalization_emojis } = await req.json()
   const db = createAdminClient()
 
   const { error } = await db.from('products').update({
     name, slug, description, active,
     ignore_stock: ignore_stock ?? false,
+    variant_label: variant_label?.trim() || 'Color',
     personalization_enabled: personalization_enabled ?? false,
     personalization_max_length: personalization_max_length ?? 20,
     personalization_emojis: Array.isArray(personalization_emojis) ? personalization_emojis : [],
@@ -29,14 +31,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // Upsert variants: update existing (by id), insert new (no id), delete removed
-  const incoming = (variants ?? []) as { id?: string; color: string | null; size: string | null; price: number; stock: number; sku: string | null; active?: boolean }[]
+  // Upsert combination rows: update existing (by id), insert new (no id), delete removed.
+  const incoming = (variants ?? []) as { id?: string; color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; personalization_max_length?: number | null }[]
   const incomingIds = incoming.map((v) => v.id).filter(Boolean) as string[]
 
-  // Delete variants that were removed. Block deletion if any orders reference the variant —
-  // the admin should turn off `active` to stop selling it instead of deleting.
-  const { data: existing } = await db.from('product_variants').select('id, color, size').eq('product_id', id)
-  const existingById = new Map((existing ?? []).map((v: { id: string; color: string | null; size: string | null }) => [v.id, v]))
+  // Delete combinations that were removed. Block deletion if any orders reference the
+  // combination — the admin should untick "Sell" to stop offering it instead of deleting.
+  const { data: existing } = await db.from('product_variants').select('id, color, variant_name').eq('product_id', id)
+  const existingById = new Map((existing ?? []).map((v: { id: string; color: string | null; variant_name: string | null }) => [v.id, v]))
   const removedIds = (existing ?? []).map((v: { id: string }) => v.id).filter((vid: string) => !incomingIds.includes(vid))
 
   for (const vid of removedIds) {
@@ -47,9 +49,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if ((count ?? 0) > 0) {
       const v = existingById.get(vid)
-      const label = v ? [v.color, v.size].filter(Boolean).join(' / ') || 'variant' : 'variant'
+      const label = (v && variantLabel(v)) || 'variant'
       return NextResponse.json({
-        error: `Can't delete "${label}" — it's been ordered before. Turn off "Sell on website" instead to stop offering it.`,
+        error: `Can't delete "${label}" — it's been ordered before. Turn off "Sell" instead to stop offering it.`,
       }, { status: 400 })
     }
 
@@ -59,7 +61,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   // Update existing or insert new
   for (const v of incoming) {
-    const payload = { product_id: id, color: v.color, size: v.size, price: v.price, stock: v.stock, sku: v.sku, active: v.active ?? true }
+    const payload = { product_id: id, color: v.color ?? null, variant_name: v.variant_name ?? null, price: v.price, stock: v.stock, sku: v.sku, active: v.active ?? true, personalization_max_length: v.personalization_max_length ?? null }
     if (v.id) {
       await db.from('product_variants').update(payload).eq('id', v.id)
     } else {

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT,
   images TEXT DEFAULT '[]',
   active INTEGER DEFAULT 1,
+  variant_label TEXT NOT NULL DEFAULT 'Color',
   personalization_enabled INTEGER NOT NULL DEFAULT 0,
   personalization_max_length INTEGER NOT NULL DEFAULT 20,
   personalization_emojis TEXT NOT NULL DEFAULT '[]',
@@ -20,10 +21,16 @@ CREATE TABLE IF NOT EXISTS product_variants (
   product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   color TEXT,
   size TEXT,
+  -- Priced variant axis value (e.g. "1 letter", "Baseball"). NULL = product has
+  -- no variant axis. A row is one (color × variant_name) combination.
+  variant_name TEXT,
   price REAL NOT NULL,
   stock INTEGER NOT NULL DEFAULT 0,
   sku TEXT,
-  active INTEGER NOT NULL DEFAULT 1
+  active INTEGER NOT NULL DEFAULT 1,
+  -- Overrides products.personalization_max_length for this variant when set
+  -- (e.g. a "Three Letter" nameplate caps personalization at 3). NULL = inherit.
+  personalization_max_length INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS orders (

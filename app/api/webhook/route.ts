@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase'
 import { sendOrderConfirmation } from '@/lib/email'
 import { syncOrderTransactions } from '@/lib/moneyLedger'
+import { variantLabel } from '@/lib/variants'
 import type Stripe from 'stripe'
 import type { CartItem, ShippingAddress } from '@/types'
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
   const [{ data: existing }, { data: variants }] = await Promise.all([
     db.from('orders').select('id').eq('stripe_payment_intent_id', pi.id).maybeSingle(),
     regularVariantIds.length > 0
-      ? db.from('product_variants').select('id, price, stock, color, size, product_id, products(name, images)').in('id', regularVariantIds)
+      ? db.from('product_variants').select('id, price, stock, color, variant_name, product_id, products(name, images)').in('id', regularVariantIds)
       : Promise.resolve({ data: [] as unknown[] }),
   ])
   if (existing) return NextResponse.json({ received: true })
@@ -85,16 +86,16 @@ export async function POST(req: NextRequest) {
       return
     }
 
-    const variant = (variants as unknown as Array<{ id: string; price: number; stock: number; color: string; size: string; product_id: string; products: { name: string; images: string[] } }> | null)?.find((v) => v.id === item.variantId)
+    const variant = (variants as unknown as Array<{ id: string; price: number; stock: number; color: string | null; variant_name: string | null; product_id: string; products: { name: string; images: string[] } }> | null)?.find((v) => v.id === item.variantId)
     const productName = variant?.products?.name ?? item.productName
-    const variantLabel = [variant?.color, variant?.size].filter(Boolean).join(' / ')
+    const label = variant ? variantLabel(variant) : ''
 
     await db.from('order_items').insert({
       order_id: order.id,
       product_id: variant?.product_id ?? item.productId,
       variant_id: item.variantId,
       product_name: productName,
-      variant_label: variantLabel || null,
+      variant_label: label || null,
       quantity: item.quantity,
       unit_price: variant?.price ?? item.price,
       personalization_text: item.personalization ?? null,

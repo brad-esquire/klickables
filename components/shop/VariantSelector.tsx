@@ -5,9 +5,15 @@ import type { ProductVariant } from '@/types'
 
 interface VariantSelectorProps {
   variants: ProductVariant[]
-  selectedId: string | null
-  onSelect: (variant: ProductVariant) => void
+  selectedColor: string | null
+  selectedVariantName: string | null
+  onSelectColor: (color: string) => void
+  onSelectVariant: (variantName: string) => void
   ignoreStock?: boolean
+  // Heading for the cosmetic color axis. Defaults to "Color".
+  colorLabel?: string
+  // Heading for the priced variant axis (products.variant_label).
+  variantAxisLabel?: string
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -35,46 +41,86 @@ const GRADIENT_MAP: Record<string, string> = {
   mystery: 'conic-gradient(from 0deg, #9655C8, #F06591, #7ED4EE, #22C55E, #EAB308, #F97316, #9655C8)',
 }
 
-export default function VariantSelector({ variants, selectedId, onSelect, ignoreStock }: VariantSelectorProps) {
+export default function VariantSelector({
+  variants,
+  selectedColor,
+  selectedVariantName,
+  onSelectColor,
+  onSelectVariant,
+  ignoreStock,
+  colorLabel = 'Color',
+  variantAxisLabel = 'Options',
+}: VariantSelectorProps) {
   const colors = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[]
-  const sizes = [...new Set(variants.map((v) => v.size).filter(Boolean))] as string[]
+  const variantNames = [...new Set(variants.map((v) => v.variant_name).filter(Boolean))] as string[]
+
+  // A value on one axis is available if, holding the current selection on the
+  // other axis, at least one active combination has stock. If the other axis is
+  // absent it simply checks that value's own rows.
+  const colorInStock = (color: string) => {
+    if (ignoreStock) return true
+    return variants.some(
+      (v) => v.color === color &&
+        (variantNames.length === 0 || v.variant_name === selectedVariantName) &&
+        (v.stock ?? 0) > 0
+    )
+  }
+  const variantInStock = (variantName: string) => {
+    if (ignoreStock) return true
+    return variants.some(
+      (v) => v.variant_name === variantName &&
+        (colors.length === 0 || v.color === selectedColor) &&
+        (v.stock ?? 0) > 0
+    )
+  }
 
   return (
     <div className="space-y-4">
       {colors.length > 0 && (
         <div>
-          <p className="text-sm font-bold text-navy mb-2">Color</p>
+          <p className="text-sm font-bold text-navy mb-2">{colorLabel}</p>
           <div className="flex flex-wrap gap-2">
             {colors.map((color) => {
-              const variant = variants.find((v) => v.color === color && (selectedId ? v.id === selectedId || variants.find(x => x.id === selectedId)?.size === v.size : true))
-              const isSelected = variant && selectedId === variant?.id
+              const isSelected = selectedColor === color
+              const outOfStock = !colorInStock(color)
               const key = color.trim().toLowerCase()
               const isMystery = key === 'mystery'
               const isGlow = key.startsWith('glow in the dark')
               const baseKey = isGlow ? key.replace('glow in the dark', '').trim() : key
               const gradient = GRADIENT_MAP[baseKey]
               const hex = COLOR_MAP[baseKey]
-              // If the label doesn't map to a known color/gradient and isn't mystery/glow,
-              // it's a glyph (emoji, heart, star) — render compactly as just the glyph.
-              const isGlyph = !gradient && !hex && !isMystery && !isGlow
-
-              const onClick = () => {
-                const match = variants.find(
-                  (v) => v.color === color &&
-                    (sizes.length === 0 || v.size === variants.find(x => x.id === selectedId)?.size)
-                ) ?? variants.find((v) => v.color === color)
-                if (match) onSelect(match)
-              }
+              // A label that maps to no known color/gradient and isn't mystery/glow
+              // is a bare glyph (emoji, heart) when short — render it in the swatch.
+              const isSwatchless = !gradient && !hex && !isMystery && !isGlow
+              const isGlyph = isSwatchless && color.trim().length <= 2
 
               if (isGlyph) {
                 return (
                   <button
                     key={color}
                     title={color}
-                    onClick={onClick}
+                    onClick={() => onSelectColor(color)}
                     className={cn(
                       'w-9 h-9 rounded-full border-2 bg-gray-100 transition-all flex items-center justify-center leading-none text-lg',
-                      isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110'
+                      isSelected ? 'border-navy scale-110' : 'border-transparent hover:scale-110',
+                      outOfStock && 'opacity-40'
+                    )}
+                  >
+                    {color}
+                  </button>
+                )
+              }
+
+              // Text label that isn't a known color → wide pill.
+              if (isSwatchless) {
+                return (
+                  <button
+                    key={color}
+                    onClick={() => onSelectColor(color)}
+                    className={cn(
+                      'px-4 py-1.5 rounded-full text-sm font-bold border-2 whitespace-nowrap transition-all',
+                      isSelected ? 'bg-navy text-white border-navy' : 'border-navy text-navy hover:bg-navy hover:text-white',
+                      outOfStock && 'opacity-40'
                     )}
                   >
                     {color}
@@ -90,12 +136,11 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
               return (
                 <button
                   key={color}
-                  onClick={onClick}
+                  onClick={() => onSelectColor(color)}
                   className={cn(
                     'flex items-center gap-2 rounded-full border-2 pl-1.5 pr-3.5 py-1 text-sm font-bold transition-colors',
-                    isSelected
-                      ? 'border-navy bg-navy/5 text-navy'
-                      : 'border-gray-200 hover:border-navy text-navy'
+                    isSelected ? 'border-navy bg-navy/5 text-navy' : 'border-gray-200 hover:border-navy text-navy',
+                    outOfStock && 'opacity-40'
                   )}
                 >
                   <span
@@ -112,28 +157,20 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
         </div>
       )}
 
-      {sizes.length > 0 && (
+      {variantNames.length > 0 && (
         <div>
-          <p className="text-sm font-bold text-navy mb-2">Size</p>
+          <p className="text-sm font-bold text-navy mb-2">{variantAxisLabel}</p>
           <div className="flex flex-wrap gap-2">
-            {sizes.map((size) => {
-              const variant = variants.find((v) => v.size === size && (selectedId ? v.color === variants.find(x => x.id === selectedId)?.color : true))
-              const isSelected = variant && selectedId === variant?.id
-              const outOfStock = !ignoreStock && variant?.stock === 0
-
+            {variantNames.map((name) => {
+              const isSelected = selectedVariantName === name
+              const outOfStock = !variantInStock(name)
               return (
                 <button
-                  key={size}
+                  key={name}
                   disabled={outOfStock}
-                  onClick={() => {
-                    const match = variants.find(
-                      (v) => v.size === size &&
-                        (colors.length === 0 || v.color === variants.find(x => x.id === selectedId)?.color)
-                    ) ?? variants.find((v) => v.size === size)
-                    if (match && !outOfStock) onSelect(match)
-                  }}
+                  onClick={() => onSelectVariant(name)}
                   className={cn(
-                    'px-4 py-1.5 rounded-full text-sm font-bold border-2 transition-all',
+                    'px-4 py-1.5 rounded-full text-sm font-bold border-2 whitespace-nowrap transition-all',
                     isSelected
                       ? 'bg-navy text-white border-navy'
                       : outOfStock
@@ -141,7 +178,7 @@ export default function VariantSelector({ variants, selectedId, onSelect, ignore
                         : 'border-navy text-navy hover:bg-navy hover:text-white'
                   )}
                 >
-                  {size}
+                  {name}
                 </button>
               )
             })}

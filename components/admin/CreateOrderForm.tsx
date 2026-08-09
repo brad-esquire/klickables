@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 import { PAYMENT_METHODS, SALES_REPS, CASH_HOLDERS } from '@/types'
 import type { PaymentMethod, Product, ProductVariant, SalesRep, CashHolder } from '@/types'
+import { variantLabel } from '@/lib/variants'
 
 type ProductWithVariants = Product & { product_variants: ProductVariant[] }
 
@@ -22,7 +23,7 @@ function emptyRow(): LineItemRow {
 }
 
 function getVariantLabel(v: ProductVariant): string {
-  return [v.color, v.size].filter(Boolean).join(' / ')
+  return variantLabel(v)
 }
 
 const inputCls = 'w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-purple'

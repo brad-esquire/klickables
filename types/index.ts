@@ -3,10 +3,19 @@ export interface ProductVariant {
   product_id: string
   color: string | null
   size: string | null
+  // Priced variant axis value (e.g. "1 letter", "Baseball"). Null when the
+  // product has no variant axis. A variant row is one (color × variant_name)
+  // combination with its own stock/sku; price is set per variant_name and is
+  // equal across that variant's colors.
+  variant_name: string | null
   price: number
   stock: number
   sku: string | null
   active: boolean
+  // Overrides the product's personalization_max_length for this variant when
+  // set (e.g. a "Three Letter" nameplate caps personalization at 3). Null =
+  // use the product-level max.
+  personalization_max_length: number | null
 }
 
 export interface Product {
@@ -17,6 +26,9 @@ export interface Product {
   images: string[]
   active: boolean
   ignore_stock: boolean
+  // Heading shown for the primary variant axis (variants.color). Defaults to
+  // "Color"; products like Name Plates override it (e.g. "Number of letters").
+  variant_label: string
   personalization_enabled: boolean
   personalization_max_length: number
   personalization_emojis: string[]

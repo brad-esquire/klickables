@@ -31,30 +31,71 @@ export function tokenizePersonalization(value: string, allowedEmojis: string[], 
   return tokens
 }
 
+// Common emoji names so admins can type "heart" instead of hunting for the
+// glyph. Keys are lowercase; aliases point at the same emoji. Not exhaustive —
+// pasted glyphs still work for anything not listed here.
+const EMOJI_NAMES: Record<string, string> = {
+  heart: '❤️', hearts: '💕', 'blue heart': '💙', 'green heart': '💚',
+  'yellow heart': '💛', 'purple heart': '💜', 'black heart': '🖤', 'broken heart': '💔',
+  star: '⭐', stars: '🌟', sparkle: '✨', sparkles: '✨', glitter: '✨',
+  moon: '🌙', sun: '☀️', cloud: '☁️', rainbow: '🌈', snowflake: '❄️', snow: '❄️',
+  fire: '🔥', flame: '🔥', lightning: '⚡', bolt: '⚡', water: '💧', drop: '💧',
+  flower: '🌸', blossom: '🌸', rose: '🌹', tulip: '🌷', sunflower: '🌻', leaf: '🍀', clover: '🍀',
+  smile: '😀', happy: '😀', laugh: '😂', wink: '😉', cool: '😎', love: '😍', kiss: '😘',
+  sad: '😢', cry: '😭', angry: '😠', heart_eyes: '😍',
+  cat: '🐱', dog: '🐶', paw: '🐾', paws: '🐾', bear: '🐻', bunny: '🐰', rabbit: '🐰',
+  unicorn: '🦄', butterfly: '🦋', bee: '🐝', fish: '🐠', turtle: '🐢', dino: '🦕', dinosaur: '🦖',
+  crown: '👑', gem: '💎', diamond: '💎', ring: '💍', gift: '🎁', present: '🎁',
+  cake: '🎂', balloon: '🎈', party: '🎉', confetti: '🎊', music: '🎵', note: '🎵', notes: '🎶',
+  check: '✔️', tick: '✔️', cross: '❌', x: '❌', 'no': '🚫',
+  thumbsup: '👍', 'thumbs up': '👍', thumbsdown: '👎', 'thumbs down': '👎', ok: '👌', wave: '👋',
+  peace: '✌️', clap: '👏', pray: '🙏', muscle: '💪', point: '👉', rocket: '🚀', star2: '💫',
+  soccer: '⚽', basketball: '🏀', football: '🏈', baseball: '⚾', trophy: '🏆', medal: '🏅',
+  apple: '🍎', pizza: '🍕', burger: '🍔', icecream: '🍦', 'ice cream': '🍦', donut: '🍩', candy: '🍬',
+  coffee: '☕', heartface: '🥰',
+}
+
 /**
- * Parse a free-form admin string (e.g. pasted from an emoji picker) into a
- * deduped list of emoji grapheme clusters. Skips whitespace and ASCII text.
+ * Parse a free-form admin string into a deduped list of emoji. Accepts both
+ * pasted glyphs ("❤️ ⭐") and typed names or :shortcodes: ("heart", ":star:").
+ * Unrecognized plain-text tokens are dropped.
  */
 export function parseEmojiList(input: string): string[] {
   if (!input) return []
-  // Use Intl.Segmenter when available — it handles multi-codepoint emoji
-  // sequences (ZWJ, variation selectors) correctly.
-  const clusters: string[] = []
-  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
-    const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-    for (const s of seg.segment(input)) clusters.push(s.segment)
-  } else {
-    clusters.push(...Array.from(input))
-  }
   const out: string[] = []
   const seen = new Set<string>()
-  for (const c of clusters) {
-    // Skip whitespace and basic ASCII text — only emojis/symbols make it through.
-    if (!c.trim()) continue
-    if (/^[\x20-\x7E]+$/.test(c)) continue
-    if (seen.has(c)) continue
-    seen.add(c)
-    out.push(c)
+  const push = (emoji: string) => {
+    if (emoji && !seen.has(emoji)) { seen.add(emoji); out.push(emoji) }
+  }
+
+  // Split on commas so multi-word names like "blue heart" stay intact, then try
+  // each comma-chunk as a whole name, else fall back to space-separated tokens.
+  for (const chunk of input.split(',')) {
+    const trimmed = chunk.trim()
+    if (!trimmed) continue
+    const wholeName = EMOJI_NAMES[trimmed.replace(/^:|:$/g, '').toLowerCase()]
+    if (wholeName) { push(wholeName); continue }
+
+    for (const token of trimmed.split(/\s+/)) {
+      if (!token) continue
+      const named = EMOJI_NAMES[token.replace(/^:|:$/g, '').toLowerCase()]
+      if (named) { push(named); continue }
+      // Not a known name — keep any actual emoji graphemes, drop plain ASCII.
+      for (const g of graphemes(token)) {
+        if (!g.trim() || /^[\x20-\x7E]+$/.test(g)) continue
+        push(g)
+      }
+    }
   }
   return out
+}
+
+// Split a string into grapheme clusters so multi-codepoint emoji (ZWJ,
+// variation selectors) stay whole.
+function graphemes(value: string): string[] {
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    return [...seg.segment(value)].map((s) => s.segment)
+  }
+  return Array.from(value)
 }

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createAdminClient } from '@/lib/supabase'
 import { Package, ShoppingBag, AlertTriangle, TrendingUp, Wallet, Users } from 'lucide-react'
 import { PAYMENT_METHODS, SALES_REPS } from '@/types'
+import { variantLabel } from '@/lib/variants'
 
 type RevenueOrder = {
   total: number | null
@@ -24,7 +25,7 @@ async function getDashboardStats() {
     db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'fulfilled', 'shipped', 'out_for_delivery']),
     db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['paid', 'shipped', 'out_for_delivery']),
     db.from('orders').select('total, payment_method, payment_method_other, sales_reps').in('status', ['paid', 'fulfilled', 'shipped', 'out_for_delivery']),
-    db.from('product_variants').select('id, sku, color, size, stock, products(name)').lte('stock', 3).gt('stock', 0),
+    db.from('product_variants').select('id, sku, color, size, variant_name, stock, products(name)').lte('stock', 3).gt('stock', 0),
     db.from('payment_events').select('amount, type').in('type', ['stripe_fee', 'postage_cost']),
     db.from('expenses').select('amount'),
   ])
@@ -197,7 +198,7 @@ export default async function AdminDashboard() {
           <ul className="space-y-1">
             {lowStock.map((v) => (
               <li key={v.id} className="text-sm text-orange-700">
-                {(v.products as unknown as { name: string })?.name} — {[v.color, v.size].filter(Boolean).join(' / ')} — {v.stock} remaining
+                {(v.products as unknown as { name: string })?.name} — {variantLabel(v)} — {v.stock} remaining
               </li>
             ))}
           </ul>

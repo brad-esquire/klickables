@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, slug, description, active, ignore_stock, images, variants, personalization_enabled, personalization_max_length, personalization_emojis } = body
+  const { name, slug, description, active, ignore_stock, images, variants, variant_label, personalization_enabled, personalization_max_length, personalization_emojis } = body
 
   const db = createAdminClient()
   const { data: product, error } = await db
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     .insert({
       name, slug, description, active,
       ignore_stock: ignore_stock ?? false,
+      variant_label: variant_label?.trim() || 'Color',
       personalization_enabled: personalization_enabled ?? false,
       personalization_max_length: personalization_max_length ?? 20,
       personalization_emojis: Array.isArray(personalization_emojis) ? personalization_emojis : [],
@@ -36,14 +37,15 @@ export async function POST(req: NextRequest) {
 
   if (variants?.length) {
     await db.from('product_variants').insert(
-      variants.map((v: { color: string; size: string; price: number; stock: number; sku: string; active?: boolean }) => ({
+      variants.map((v: { color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; personalization_max_length?: number | null }) => ({
         product_id: product.id,
-        color: v.color,
-        size: v.size,
+        color: v.color ?? null,
+        variant_name: v.variant_name ?? null,
         price: v.price,
         stock: v.stock,
         sku: v.sku,
         active: v.active ?? true,
+        personalization_max_length: v.personalization_max_length ?? null,
       }))
     )
   }

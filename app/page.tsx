@@ -36,15 +36,16 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-cream py-20 px-4">
+      <section className="bg-cream py-10 px-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1 text-center md:text-left order-2 md:order-1">
             <p className="text-purple font-bold uppercase tracking-widest text-sm mb-3">
               3D Printed Clickers
             </p>
-            <h1 className="text-5xl md:text-6xl font-black text-navy leading-tight mb-6">
-              Click. Collect.<br />
-              <span className="text-pink">Love it.</span>
+            <h1 className="text-5xl md:text-6xl font-black leading-tight mb-6 md:whitespace-nowrap">
+              <span className="text-purple">Click.</span>{' '}
+              <span className="text-pink">Collect.</span>{' '}
+              <span className="text-sky">Love.</span>
             </h1>
             <p className="text-navy/70 text-lg mb-8 max-w-md">
               Satisfying, colorful 3D printed clickers — handcrafted by best friends
@@ -59,7 +60,7 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="flex-1 flex justify-center order-1 md:order-2">
+          <div className="flex-1 min-w-0 flex justify-center order-1 md:order-2">
             <Image
               src="/logo.png"
               alt="Klickables"
@@ -67,14 +68,14 @@ export default async function HomePage() {
               height={360}
               priority
               unoptimized
-              className="drop-shadow-xl"
+              className="drop-shadow-xl max-w-full h-auto"
             />
           </div>
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="py-16 px-4">
+      <section className="pt-10 pb-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-black text-navy">Featured Clickers</h2>

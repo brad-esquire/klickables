@@ -17,14 +17,52 @@ function isGifUrl(url: string) {
 }
 import type { Product, ProductVariant } from '@/types'
 
-interface Variant {
-  id?: string
-  color: string
-  size: string
+// The priced axis: each option has a name, a price (shared across its colors),
+// and an optional personalization cap. `key` is a stable local id.
+interface VariantDef {
+  key: string
+  name: string
   price: string
+  personalizationMax: string
+}
+
+// Inventory for one (variant option × color) combination.
+interface Cell {
+  id?: string
   stock: string
   sku: string
   active: boolean
+}
+
+const cellKey = (variantKey: string, color: string) => `${variantKey}||${color}`
+
+// Derive the form's variant/color/inventory state from a product's rows.
+function buildVariantState(product?: Product & { product_variants?: ProductVariant[] }) {
+  const rows = product?.product_variants ?? []
+  const names = [...new Set(rows.map((r) => r.variant_name).filter(Boolean))] as string[]
+  const colors = [...new Set(rows.map((r) => r.color).filter(Boolean))] as string[]
+  const defs: VariantDef[] = names.map((name, idx) => {
+    const row = rows.find((r) => r.variant_name === name)!
+    return {
+      key: `v${idx}`,
+      name,
+      price: row.price != null ? String(row.price) : '',
+      personalizationMax: row.personalization_max_length != null ? String(row.personalization_max_length) : '',
+    }
+  })
+  const baseRow = rows.find((r) => !r.variant_name) ?? rows[0]
+  const basePrice = baseRow?.price != null ? String(baseRow.price) : ''
+  const cells: Record<string, Cell> = {}
+  for (const r of rows) {
+    const def = defs.find((d) => d.name === r.variant_name)
+    cells[cellKey(def?.key ?? '', r.color ?? '')] = {
+      id: r.id,
+      stock: r.stock != null ? String(r.stock) : '0',
+      sku: r.sku ?? '',
+      active: r.active ?? true,
+    }
+  }
+  return { defs, colors, basePrice, cells, nextKey: defs.length }
 }
 
 interface ProductFormProps {
@@ -41,26 +79,61 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [description, setDescription] = useState(product?.description ?? '')
   const [active, setActive] = useState(product?.active ?? true)
   const [ignoreStock, setIgnoreStock] = useState(product?.ignore_stock ?? false)
+  const [variantLabel, setVariantLabel] = useState(product?.variant_label ?? 'Color')
   const [personalizationEnabled, setPersonalizationEnabled] = useState(product?.personalization_enabled ?? false)
   const [personalizationMaxLength, setPersonalizationMaxLength] = useState((product?.personalization_max_length ?? 20).toString())
   const [personalizationEmojis, setPersonalizationEmojis] = useState<string[]>(product?.personalization_emojis ?? [])
   const [emojiInput, setEmojiInput] = useState('')
+  const [emojiHint, setEmojiHint] = useState('')
   const [images, setImages] = useState<string[]>(product?.images ?? [])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [variants, setVariants] = useState<Variant[]>(
-    product?.product_variants?.map((v) => ({
-      id: v.id,
-      color: v.color ?? '',
-      size: v.size ?? '',
-      price: v.price.toString(),
-      stock: v.stock.toString(),
-      sku: v.sku ?? '',
-      active: v.active ?? true,
-    })) ?? [{ color: '', size: '', price: '', stock: '0', sku: '', active: true }]
-  )
+
+  // ── Variants (priced axis) × Colors (cosmetic) → per-combination inventory ──
+  const [init] = useState(() => buildVariantState(product))
+  const [basePrice, setBasePrice] = useState(init.basePrice)
+  const [variantDefs, setVariantDefs] = useState<VariantDef[]>(init.defs)
+  const [colors, setColors] = useState<string[]>(init.colors)
+  const [cells, setCells] = useState<Record<string, Cell>>(init.cells)
+  const [colorInput, setColorInput] = useState('')
+  const keyCounter = useRef(init.nextKey)
+
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const getCell = (variantKey: string, color: string): Cell =>
+    cells[cellKey(variantKey, color)] ?? { stock: '0', sku: '', active: true }
+  const patchCell = (variantKey: string, color: string, patch: Partial<Cell>) =>
+    setCells((c) => {
+      const k = cellKey(variantKey, color)
+      return { ...c, [k]: { ...(c[k] ?? { stock: '0', sku: '', active: true }), ...patch } }
+    })
+
+  function addVariantDef() {
+    setVariantDefs((d) => [...d, { key: `v${keyCounter.current++}`, name: '', price: basePrice, personalizationMax: '' }])
+  }
+  function removeVariantDef(key: string) {
+    setVariantDefs((d) => d.filter((x) => x.key !== key))
+    setCells((c) => Object.fromEntries(Object.entries(c).filter(([k]) => !k.startsWith(`${key}||`))))
+  }
+  function updateVariantDef(key: string, field: keyof VariantDef, val: string) {
+    setVariantDefs((d) => d.map((x) => (x.key === key ? { ...x, [field]: val } : x)))
+  }
+
+  function addColor(raw: string) {
+    const name = raw.trim()
+    if (!name || colors.some((c) => c.toLowerCase() === name.toLowerCase())) return
+    setColors((c) => [...c, name])
+    setColorInput('')
+  }
+  function removeColor(name: string) {
+    setColors((c) => c.filter((x) => x !== name))
+  }
+
+  // The combinations that become product_variants rows: variants × colors, with
+  // a single base row when an axis is empty.
+  const defList: (VariantDef | null)[] = variantDefs.length ? variantDefs : [null]
+  const colorList: (string | null)[] = colors.length ? colors : [null]
 
   function autoSlug(n: string) {
     setName(n)
@@ -97,42 +170,51 @@ export default function ProductForm({ product }: ProductFormProps) {
     setImages((imgs) => [imgs[index], ...imgs.filter((_, i) => i !== index)])
   }
 
-  function addVariant() {
-    setVariants((v) => [...v, { color: '', size: '', price: '', stock: '0', sku: '', active: true }])
-  }
-
-  function removeVariant(i: number) {
-    setVariants((v) => v.filter((_, idx) => idx !== i))
-  }
-
-  function updateVariant(i: number, field: keyof Variant, val: string | boolean) {
-    setVariants((v) => v.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setError('')
 
+    // Expand variants × colors into one row per combination.
+    const rows = []
+    for (const def of defList) {
+      const price = def ? parseFloat(def.price) : parseFloat(basePrice)
+      if (!Number.isFinite(price)) {
+        setError(def ? `Set a price for the "${def.name || 'unnamed'}" variant.` : 'Set a product price.')
+        return
+      }
+      for (const color of colorList) {
+        const cell = getCell(def?.key ?? '', color ?? '')
+        rows.push({
+          id: cell.id,
+          color: color ?? null,
+          variant_name: def ? (def.name.trim() || null) : null,
+          price,
+          stock: parseInt(cell.stock) || 0,
+          sku: cell.sku.trim() || null,
+          active: cell.active,
+          personalization_max_length:
+            def && def.personalizationMax.trim() ? Math.max(1, parseInt(def.personalizationMax)) : null,
+        })
+      }
+    }
+    if (variantDefs.some((d) => !d.name.trim())) {
+      setError('Every variant option needs a name.')
+      return
+    }
+
+    setSaving(true)
     const body = {
       name,
       slug,
       description,
       active,
       ignore_stock: ignoreStock,
+      variant_label: variantLabel.trim() || 'Options',
       personalization_enabled: personalizationEnabled,
       personalization_max_length: Math.max(1, parseInt(personalizationMaxLength) || 20),
       personalization_emojis: personalizationEmojis,
       images,
-      variants: variants.map((v) => ({
-        id: v.id,
-        color: v.color.trim() || null,
-        size: v.size.trim() || null,
-        price: parseFloat(v.price),
-        stock: parseInt(v.stock),
-        sku: v.sku || null,
-        active: v.active,
-      })),
+      variants: rows,
     }
 
     const res = await fetch(
@@ -232,7 +314,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                 <input
                   type="text"
                   value={emojiInput}
-                  onChange={(e) => setEmojiInput(e.target.value)}
+                  onChange={(e) => { setEmojiInput(e.target.value); if (emojiHint) setEmojiHint('') }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
@@ -245,13 +327,17 @@ export default function ProductForm({ product }: ProductFormProps) {
                           return next
                         })
                         setEmojiInput('')
+                        setEmojiHint('')
+                      } else if (emojiInput.trim()) {
+                        setEmojiHint(`"${emojiInput.trim()}" isn't a recognized name — try a common word like "heart" or paste the emoji itself (❤️).`)
                       }
                     }
                   }}
-                  placeholder="Paste or type emojis (e.g. ❤️ ⭐ 🌙) then press Enter"
+                  placeholder="Type a name (heart, star, moon) or paste an emoji, then press Enter"
                   className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-purple"
                 />
               </div>
+              {emojiHint && <p className="text-xs text-orange-500 mt-1.5">{emojiHint}</p>}
               {personalizationEmojis.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {personalizationEmojis.map((e, i) => (
@@ -361,50 +447,137 @@ export default function ProductForm({ product }: ProductFormProps) {
         />
       </div>
 
-      {/* Variants */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-black text-navy">Variants</h2>
-          <button type="button" onClick={addVariant} className="flex items-center gap-1 text-sm text-purple font-bold hover:text-pink transition-colors">
-            <Plus size={16} /> Add Variant
-          </button>
+      {/* Variants & pricing */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+        <h2 className="font-black text-navy">Variants &amp; Pricing</h2>
+
+        {/* Base price — only when there is no priced variant axis */}
+        {variantDefs.length === 0 && (
+          <div>
+            <label className="block text-sm font-bold text-navy mb-1">Price ($)</label>
+            <input
+              type="number" step="0.01" min="0"
+              value={basePrice}
+              onChange={(e) => setBasePrice(e.target.value)}
+              className="w-32 border-2 border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-purple"
+            />
+            <p className="text-xs text-navy/50 mt-1">The product price. Add variant options below if different variants (sizes, letter counts, ball types…) have different prices.</p>
+          </div>
+        )}
+
+        {/* Variant options (priced axis) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-bold text-navy">Variant options</span>
+              <span className="text-navy/40 text-xs font-normal"> — optional priced axis</span>
+            </div>
+            <button type="button" onClick={addVariantDef} className="flex items-center gap-1 text-sm text-purple font-bold hover:text-pink transition-colors">
+              <Plus size={16} /> Add option
+            </button>
+          </div>
+
+          {variantDefs.length > 0 && (
+            <>
+              <div>
+                <label className="block text-xs font-bold text-navy/60 mb-1">Heading shown to shoppers</label>
+                <input
+                  value={variantLabel}
+                  onChange={(e) => setVariantLabel(e.target.value)}
+                  placeholder="e.g. Size, Ball type, Number of letters"
+                  className="w-64 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple"
+                />
+              </div>
+              {variantDefs.map((def) => (
+                <div key={def.key} className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-navy/60 mb-1">Name</label>
+                    <input value={def.name} onChange={(e) => updateVariantDef(def.key, 'name', e.target.value)} placeholder="e.g. 3 letter" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
+                  </div>
+                  <div className="w-24">
+                    <label className="block text-xs font-bold text-navy/60 mb-1">Price ($)</label>
+                    <input type="number" step="0.01" min="0" value={def.price} onChange={(e) => updateVariantDef(def.key, 'price', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
+                  </div>
+                  {personalizationEnabled && (
+                    <div className="w-28">
+                      <label className="block text-xs font-bold text-navy/60 mb-1" title={`Blank = product max (${personalizationMaxLength || 20})`}>Max letters</label>
+                      <input type="number" min={1} max={100} value={def.personalizationMax} onChange={(e) => updateVariantDef(def.key, 'personalizationMax', e.target.value)} placeholder={`${personalizationMaxLength || 20}`} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
+                    </div>
+                  )}
+                  <button type="button" onClick={() => removeVariantDef(def.key)} className="text-gray-300 hover:text-red-500 transition-colors mb-2.5" title="Remove option">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <p className="text-xs text-navy/50">Price is set per variant and applies to all of its colors.</p>
+            </>
+          )}
         </div>
 
-        {variants.map((v, i) => (
-          <div key={i} className={`grid grid-cols-6 gap-2 items-end border border-gray-100 rounded-xl p-3 ${v.active ? '' : 'bg-gray-50 opacity-70'}`}>
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-navy/60 mb-1">Color</label>
-              <input value={v.color} onChange={(e) => updateVariant(i, 'color', e.target.value)} placeholder="e.g. Purple" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
+        {/* Colors (cosmetic axis) */}
+        <div className="space-y-2 border-t border-gray-100 pt-4">
+          <label className="block text-sm font-bold text-navy">
+            Colors <span className="text-navy/40 text-xs font-normal">— optional, same price across colors</span>
+          </label>
+          <input
+            type="text"
+            value={colorInput}
+            onChange={(e) => setColorInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addColor(colorInput) } }}
+            placeholder="Type a color (e.g. Purple) then press Enter"
+            className="w-64 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple"
+          />
+          {colors.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {colors.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => removeColor(c)}
+                  className="group flex items-center gap-1 border-2 border-gray-200 hover:border-red-400 rounded-full pl-3 pr-2 py-1 text-sm font-semibold text-navy"
+                  title="Click to remove"
+                >
+                  <span>{c}</span>
+                  <X size={14} className="text-gray-400 group-hover:text-red-500" />
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="block text-xs font-bold text-navy/60 mb-1">Size</label>
-              <input value={v.size} onChange={(e) => updateVariant(i, 'size', e.target.value)} placeholder="e.g. S" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-navy/60 mb-1">Price ($)</label>
-              <input type="number" step="0.01" min="0" value={v.price} onChange={(e) => updateVariant(i, 'price', e.target.value)} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-navy/60 mb-1">Stock</label>
-              <input type="number" min="0" value={v.stock} onChange={(e) => updateVariant(i, 'stock', e.target.value)} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple" />
-            </div>
-            <div className="flex justify-end items-center gap-3">
-              <label className="flex items-center gap-1.5 cursor-pointer" title="Sell on website">
-                <input
-                  type="checkbox"
-                  checked={v.active}
-                  onChange={(e) => updateVariant(i, 'active', e.target.checked)}
-                  className="w-4 h-4 accent-purple"
-                />
-                <span className="text-xs font-bold text-navy/60">Sell</span>
-              </label>
-              <button type="button" onClick={() => removeVariant(i)} disabled={variants.length === 1} className="text-gray-300 hover:text-red-500 disabled:opacity-30 transition-colors">
-                <Trash2 size={16} />
-              </button>
-            </div>
+          ) : (
+            <p className="text-xs text-navy/40">No colors — the product has no color choice.</p>
+          )}
+        </div>
+
+        {/* Inventory grid: one row per combination */}
+        <div className="space-y-2 border-t border-gray-100 pt-4">
+          <label className="block text-sm font-bold text-navy">
+            Inventory {ignoreStock && <span className="text-navy/40 text-xs font-normal">— stock not enforced for this product</span>}
+          </label>
+          <div className="space-y-1.5">
+            {defList.map((def) =>
+              colorList.map((color) => {
+                const vk = def?.key ?? ''
+                const ck = color ?? ''
+                const cell = getCell(vk, ck)
+                const comboLabel = [def?.name, color].filter(Boolean).join(' / ') || 'Default'
+                return (
+                  <div key={`${vk}||${ck}`} className={`grid grid-cols-12 gap-2 items-center border border-gray-100 rounded-xl px-3 py-2 ${cell.active ? '' : 'bg-gray-50 opacity-70'}`}>
+                    <span className="col-span-5 text-sm font-semibold text-navy truncate" title={comboLabel}>{comboLabel}</span>
+                    <div className="col-span-3">
+                      <input type="number" min="0" value={cell.stock} onChange={(e) => patchCell(vk, ck, { stock: e.target.value })} placeholder="Stock" title="Stock" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-purple" />
+                    </div>
+                    <div className="col-span-3">
+                      <input value={cell.sku} onChange={(e) => patchCell(vk, ck, { sku: e.target.value })} placeholder="SKU" title="SKU" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-purple" />
+                    </div>
+                    <label className="col-span-1 flex items-center justify-end cursor-pointer" title="Sell on website">
+                      <input type="checkbox" checked={cell.active} onChange={(e) => patchCell(vk, ck, { active: e.target.checked })} className="w-4 h-4 accent-purple" />
+                    </label>
+                  </div>
+                )
+              })
+            )}
           </div>
-        ))}
-        <p className="text-xs text-navy/50">Turn off <strong>Sell</strong> to hide a variant from the shop without losing its order history. Deletion is only allowed if a variant has never been ordered.</p>
+          <p className="text-xs text-navy/50">Untick a combination to stop selling it without losing order history. Removing a variant option or color that has been ordered is blocked on save — untick it instead.</p>
+        </div>
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}

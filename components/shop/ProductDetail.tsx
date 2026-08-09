@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
 import { trackViewItem, trackAddToCart } from '@/lib/analytics'
 import { tokenizePersonalization } from '@/lib/personalization'
+import { variantLabel as buildVariantLabel } from '@/lib/variants'
 
 interface ProductDetailProps {
   product: Product
@@ -17,17 +18,39 @@ interface ProductDetailProps {
 
 export default function ProductDetail({ product }: ProductDetailProps) {
   const variants = product.product_variants ?? []
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
-    product.ignore_stock ? (variants[0] ?? null) : (variants.find((v) => v.stock > 0) ?? variants[0] ?? null)
+  // Two independent axes: cosmetic colors and the priced variant axis. A row is
+  // one (color × variant_name) combination.
+  const colors = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[]
+  const variantNames = [...new Set(variants.map((v) => v.variant_name).filter(Boolean))] as string[]
+  const rowInStock = (v: ProductVariant | null | undefined) => product.ignore_stock || (v?.stock ?? 0) > 0
+  const findRow = (color: string | null, name: string | null) =>
+    variants.find((v) => (v.color ?? null) === (color ?? null) && (v.variant_name ?? null) === (name ?? null)) ?? null
+
+  const [selectedColor, setSelectedColor] = useState<string | null>(
+    colors.find((c) => variants.some((v) => v.color === c && rowInStock(v))) ?? colors[0] ?? null
+  )
+  const [selectedVariantName, setSelectedVariantName] = useState<string | null>(
+    variantNames.find((n) => variants.some((v) => v.variant_name === n && rowInStock(v))) ?? variantNames[0] ?? null
   )
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const [personalization, setPersonalization] = useState('')
   const addItem = useCartStore((s) => s.addItem)
 
-  const variantLabel = [selectedVariant?.color, selectedVariant?.size].filter(Boolean).join(' / ')
+  const selectedVariant = findRow(selectedColor, selectedVariantName)
+  const variantLabel = selectedVariant ? buildVariantLabel(selectedVariant) : ''
   const inStock = product.ignore_stock || (selectedVariant?.stock ?? 0) > 0
-  const isMystery = selectedVariant?.color?.trim().toLowerCase() === 'mystery'
+  const isMystery = selectedColor?.trim().toLowerCase() === 'mystery'
+  // The selected combination can cap personalization length (e.g. a "3 letter"
+  // nameplate); otherwise fall back to the product-level max.
+  const personalizationMax = selectedVariant?.personalization_max_length ?? product.personalization_max_length
+
+  // Re-trim personalization when a selection change lowers the cap.
+  const retrimFor = (row: ProductVariant | null) => {
+    if (!product.personalization_enabled) return
+    const nextMax = row?.personalization_max_length ?? product.personalization_max_length
+    setPersonalization((prev) => tokenizePersonalization(prev, product.personalization_emojis ?? [], nextMax).join(''))
+  }
 
   useEffect(() => {
     trackViewItem({
@@ -43,7 +66,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   function handleAddToCart() {
     if (!selectedVariant || !inStock) return
     const cleanPersonalization = product.personalization_enabled
-      ? tokenizePersonalization(personalization, product.personalization_emojis ?? [], product.personalization_max_length).join('').trim()
+      ? tokenizePersonalization(personalization, product.personalization_emojis ?? [], personalizationMax).join('').trim()
       : ''
     addItem({
       variantId: selectedVariant.id,
@@ -92,14 +115,26 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           {variants.length > 0 && (
             <VariantSelector
               variants={variants}
-              selectedId={selectedVariant?.id ?? null}
-              onSelect={(v) => { setSelectedVariant(v); setQty(1) }}
+              selectedColor={selectedColor}
+              selectedVariantName={selectedVariantName}
+              colorLabel="Color"
+              variantAxisLabel={product.variant_label || 'Options'}
+              onSelectColor={(c) => {
+                setSelectedColor(c)
+                setQty(1)
+                retrimFor(findRow(c, selectedVariantName))
+              }}
+              onSelectVariant={(n) => {
+                setSelectedVariantName(n)
+                setQty(1)
+                retrimFor(findRow(selectedColor, n))
+              }}
               ignoreStock={product.ignore_stock}
             />
           )}
 
           {product.personalization_enabled && (() => {
-            const max = product.personalization_max_length
+            const max = personalizationMax
             const emojis = product.personalization_emojis ?? []
             const tokens = tokenizePersonalization(personalization, emojis, max)
             const remaining = max - tokens.length
