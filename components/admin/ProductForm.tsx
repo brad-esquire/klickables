@@ -576,7 +576,7 @@ export default function ProductForm({ product }: ProductFormProps) {
               })
             )}
           </div>
-          <p className="text-xs text-navy/50">Untick a combination to stop selling it without losing order history. Removing a variant option or color that has been ordered is blocked on save — untick it instead.</p>
+          <p className="text-xs text-navy/50">Untick a combination to stop selling it without losing order history. A combination that has already been ordered is kept (and hidden) rather than deleted when you remove its variant or color, so history is preserved.</p>
         </div>
       </div>
 

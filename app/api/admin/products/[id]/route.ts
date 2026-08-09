@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase'
-import { variantLabel } from '@/lib/variants'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -31,36 +30,46 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // Upsert combination rows: update existing (by id), insert new (no id), delete removed.
+  // Reconcile combination rows. Each incoming row is matched to an existing row by its
+  // id, or — when the grid regenerated rows without ids after a structural change —
+  // adopted by natural key (variant_name × color), so an ordered combination is reused
+  // rather than duplicated.
   const incoming = (variants ?? []) as { id?: string; color: string | null; variant_name?: string | null; price: number; stock: number; sku: string | null; active?: boolean; personalization_max_length?: number | null }[]
-  const incomingIds = incoming.map((v) => v.id).filter(Boolean) as string[]
+  const naturalKey = (r: { variant_name?: string | null; color?: string | null }) => `${r.variant_name ?? ''}||${r.color ?? ''}`
 
-  // Delete combinations that were removed. Block deletion if any orders reference the
-  // combination — the admin should untick "Sell" to stop offering it instead of deleting.
   const { data: existing } = await db.from('product_variants').select('id, color, variant_name').eq('product_id', id)
-  const existingById = new Map((existing ?? []).map((v: { id: string; color: string | null; variant_name: string | null }) => [v.id, v]))
-  const removedIds = (existing ?? []).map((v: { id: string }) => v.id).filter((vid: string) => !incomingIds.includes(vid))
+  const existingRows = (existing ?? []) as { id: string; color: string | null; variant_name: string | null }[]
+  const idByKey = new Map<string, string>()
+  for (const r of existingRows) if (!idByKey.has(naturalKey(r))) idByKey.set(naturalKey(r), r.id)
 
-  for (const vid of removedIds) {
-    const { count } = await db
-      .from('order_items')
-      .select('id', { count: 'exact', head: true })
-      .eq('variant_id', vid)
-
-    if ((count ?? 0) > 0) {
-      const v = existingById.get(vid)
-      const label = (v && variantLabel(v)) || 'variant'
-      return NextResponse.json({
-        error: `Can't delete "${label}" — it's been ordered before. Turn off "Sell" instead to stop offering it.`,
-      }, { status: 400 })
+  const claimed = new Set<string>()
+  const resolved = incoming.map((v) => {
+    let vid = v.id
+    if (!vid) {
+      const adopt = idByKey.get(naturalKey(v))
+      if (adopt && !claimed.has(adopt)) vid = adopt
     }
+    if (vid) claimed.add(vid)
+    return { ...v, id: vid }
+  })
 
-    const { error: delErr } = await db.from('product_variants').delete().eq('id', vid)
-    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 400 })
+  // Rows no incoming combination claimed are removed. Ordered ones can't be hard-deleted
+  // without losing history, so deactivate them instead (kept, hidden from the shop);
+  // hard-delete the rest.
+  for (const r of existingRows) {
+    if (claimed.has(r.id)) continue
+    const { count } = await db.from('order_items').select('id', { count: 'exact', head: true }).eq('variant_id', r.id)
+    if ((count ?? 0) > 0) {
+      const { error: deactErr } = await db.from('product_variants').update({ active: false }).eq('id', r.id)
+      if (deactErr) return NextResponse.json({ error: deactErr.message }, { status: 400 })
+    } else {
+      const { error: delErr } = await db.from('product_variants').delete().eq('id', r.id)
+      if (delErr) return NextResponse.json({ error: delErr.message }, { status: 400 })
+    }
   }
 
-  // Update existing or insert new
-  for (const v of incoming) {
+  // Update matched/adopted rows; insert genuinely new combinations.
+  for (const v of resolved) {
     const payload = { product_id: id, color: v.color ?? null, variant_name: v.variant_name ?? null, price: v.price, stock: v.stock, sku: v.sku, active: v.active ?? true, personalization_max_length: v.personalization_max_length ?? null }
     if (v.id) {
       await db.from('product_variants').update(payload).eq('id', v.id)
