@@ -89,6 +89,18 @@ export async function syncOrderTransactions(orderId: string): Promise<void> {
   // Wipe all non-manual rows for this order so the rebuild is clean.
   await db.from('money_transactions').delete().eq('order_id', orderId).eq('manual_override', false)
 
+  // Manual overrides survive that wipe, so whatever they already cover must not be
+  // re-derived — otherwise the corrected row and a fresh auto row both land in the
+  // ledger and the amount is counted twice. Order-level rows (the sale and the
+  // processor fee) are identified by kind; payment-event rows by their event id.
+  const { data: keptData } = await db.from('money_transactions')
+    .select('kind, payment_event_id')
+    .eq('order_id', orderId)
+    .eq('manual_override', true)
+  const kept = (keptData ?? []) as { kind: string; payment_event_id: string | null }[]
+  const isOverridden = (kind: string) => kept.some((k) => k.kind === kind && !k.payment_event_id)
+  const overriddenEventIds = new Set(kept.filter((k) => k.payment_event_id).map((k) => k.payment_event_id as string))
+
   const includeSale = order.status !== 'pending' && order.status !== 'cancelled' && !!order.total && Number(order.total) > 0
   const orderDate = order.created_at.slice(0, 10)
 
@@ -97,21 +109,26 @@ export async function syncOrderTransactions(orderId: string): Promise<void> {
     if (dest) {
       const total = Number(order.total)
 
-      await db.from('money_transactions').insert({
-        occurred_at:     orderDate,
-        kind:            'sale',
-        from_account_id: null,
-        to_account_id:   dest.id,
-        amount:          total,
-        order_id:        orderId,
-        description:     `Sale — Order #${shortOrderId(orderId)}`,
-      })
+      if (!isOverridden('sale')) {
+        await db.from('money_transactions').insert({
+          occurred_at:     orderDate,
+          kind:            'sale',
+          from_account_id: null,
+          to_account_id:   dest.id,
+          amount:          total,
+          order_id:        orderId,
+          description:     `Sale — Order #${shortOrderId(orderId)}`,
+        })
+      }
 
       // Auto-deducted processor fee (Venmo, PayPal, etc.). Stripe is excluded —
       // its real fees flow in via payment_events to avoid double-counting.
+      // The rate/fixed defaults assume one transaction per order; when the real
+      // charge differs (an order paid across several transfers, say) the row can be
+      // edited in the ledger, which pins it as an override and skips this branch.
       const feeRate  = Number(dest.default_fee_rate)
       const feeFixed = Number(dest.default_fee_fixed)
-      if (feeRate > 0 || feeFixed > 0) {
+      if ((feeRate > 0 || feeFixed > 0) && !isOverridden('expense')) {
         const fee = round2(total * feeRate + feeFixed)
         if (fee > 0) {
           await db.from('money_transactions').insert({
@@ -137,6 +154,7 @@ export async function syncOrderTransactions(orderId: string): Promise<void> {
   if (outflowEvents.length > 0) {
     const stripe = await findAccount(db, { name: 'Stripe' })
     for (const ev of outflowEvents) {
+      if (overriddenEventIds.has(ev.id)) continue
       const amount = Number(ev.amount)
       if (!amount || amount <= 0) continue
       const stripeDefaults = ev.type === 'stripe_fee' || ev.type === 'refund_issued'
@@ -172,6 +190,14 @@ export async function syncExpenseTransaction(expenseId: string): Promise<void> {
   const exp = expData as ExpenseRow | null
 
   await db.from('money_transactions').delete().eq('expense_id', expenseId).eq('manual_override', false)
+
+  // An edited row survived the wipe and already represents this expense — re-deriving
+  // it would double-count the outflow.
+  const { count: overrideCount } = await db.from('money_transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('expense_id', expenseId)
+    .eq('manual_override', true)
+  if (overrideCount) return
 
   if (exp && exp.paid_from_account_id) {
     // A negative expense is a refund: the money flows back INTO the account, so the

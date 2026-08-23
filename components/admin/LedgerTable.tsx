@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { MoneyAccount, MoneyTransaction, MoneyTransactionKind } from '@/types'
 import { MONEY_TRANSACTION_KINDS } from '@/types'
+import TransactionEditModal from './TransactionEditModal'
 
 interface Props {
   transactions: MoneyTransaction[]
@@ -84,6 +85,7 @@ export default function LedgerTable({ transactions, accounts }: Props) {
               <th className="text-left px-3 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">To</th>
               <th className="text-right px-3 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Amount</th>
               <th className="text-left px-3 py-3 text-xs font-bold text-navy/50 uppercase tracking-wide">Description</th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -116,6 +118,9 @@ export default function LedgerTable({ transactions, accounts }: Props) {
                     )}
                     {t.notes && <span className="block text-xs text-navy/40 italic">{t.notes}</span>}
                     {t.manual_override && <span className="ml-1 text-xs text-purple/70">[manual]</span>}
+                  </td>
+                  <td className="px-3 py-3">
+                    <TransactionEditModal transaction={t} />
                   </td>
                 </tr>
               )
