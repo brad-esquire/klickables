@@ -94,6 +94,11 @@ async function getAllExpenses(): Promise<LoadedData> {
   }
 }
 
+// Refunds are stored as negative amounts, so they can show up in any total.
+function money(amount: number): string {
+  return amount < 0 ? `−$${Math.abs(amount).toFixed(2)}` : `$${amount.toFixed(2)}`
+}
+
 const categoryColors: Record<string, string> = {
   Materials:           'bg-purple/10 text-purple',
   Packaging:           'bg-blue-50 text-blue-600',
@@ -133,7 +138,7 @@ export default async function ExpensesPage() {
         <div>
           <h1 className="text-3xl font-black text-navy">Expenses</h1>
           {rows.length > 0 && (
-            <p className="text-navy/50 text-sm mt-1">{rows.length} entries · total ${total.toFixed(2)}</p>
+            <p className="text-navy/50 text-sm mt-1">{rows.length} entries · total {money(total)}</p>
           )}
         </div>
         <ExpenseModal />
@@ -156,7 +161,7 @@ export default async function ExpensesPage() {
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${categoryColors[cat] ?? 'bg-gray-100 text-gray-500'}`}>
                       {cat}
                     </span>
-                    <span className="text-sm font-bold text-navy">${amt.toFixed(2)}</span>
+                    <span className={`text-sm font-bold ${amt < 0 ? 'text-emerald-600' : 'text-navy'}`}>{money(amt)}</span>
                   </div>
                 ))}
             </div>
@@ -206,7 +211,9 @@ export default async function ExpensesPage() {
                           paidFrom.text
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-sm font-bold text-navy text-right">${e.amount.toFixed(2)}</td>
+                      <td className={`px-5 py-3.5 text-sm font-bold text-right whitespace-nowrap ${e.amount < 0 ? 'text-emerald-600' : 'text-navy'}`}>
+                        {money(e.amount)}
+                      </td>
                       <td className="px-3 py-3.5">
                         {e.source === 'manual' && e.expense && (
                           <div className="flex items-center gap-1">
@@ -227,7 +234,7 @@ export default async function ExpensesPage() {
               <tfoot>
                 <tr className="border-t-2 border-gray-100 bg-gray-50/50">
                   <td colSpan={4} className="px-5 py-3 text-sm font-black text-navy">Total</td>
-                  <td className="px-5 py-3 text-sm font-black text-navy text-right">${total.toFixed(2)}</td>
+                  <td className="px-5 py-3 text-sm font-black text-navy text-right">{money(total)}</td>
                   <td />
                 </tr>
               </tfoot>

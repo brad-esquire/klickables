@@ -174,15 +174,22 @@ export async function syncExpenseTransaction(expenseId: string): Promise<void> {
   await db.from('money_transactions').delete().eq('expense_id', expenseId).eq('manual_override', false)
 
   if (exp && exp.paid_from_account_id) {
-    await db.from('money_transactions').insert({
-      occurred_at:     exp.date,
-      kind:            'expense',
-      from_account_id: exp.paid_from_account_id,
-      to_account_id:   null,
-      amount:          Number(exp.amount),
-      expense_id:      expenseId,
-      description:     exp.description,
-    })
+    // A negative expense is a refund: the money flows back INTO the account, so the
+    // ledger row is reversed. money_transactions.amount is constrained to > 0, hence
+    // the direction — not the sign — carries the meaning.
+    const amount = Number(exp.amount)
+    const isRefund = amount < 0
+    if (amount !== 0) {
+      await db.from('money_transactions').insert({
+        occurred_at:     exp.date,
+        kind:            'expense',
+        from_account_id: isRefund ? null : exp.paid_from_account_id,
+        to_account_id:   isRefund ? exp.paid_from_account_id : null,
+        amount:          Math.abs(amount),
+        expense_id:      expenseId,
+        description:     exp.description,
+      })
+    }
   }
 }
 

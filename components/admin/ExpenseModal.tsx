@@ -49,7 +49,9 @@ export default function ExpenseModal({ expense }: Props) {
   async function handleSubmit() {
     const amt = parseFloat(amount)
     if (!description.trim()) { setError('Description is required.'); return }
-    if (isNaN(amt) || amt <= 0) { setError('Enter a valid amount.'); return }
+    // Negatives are allowed: a refund is logged as a negative amount so it nets
+    // against the original expense's category.
+    if (!Number.isFinite(amt) || amt === 0) { setError('Enter a valid amount — negative to log a refund.'); return }
     if (!date) { setError('Date is required.'); return }
 
     setSaving(true)
@@ -115,13 +117,13 @@ export default function ExpenseModal({ expense }: Props) {
                   <label className={labelCls}>Amount ($)</label>
                   <input
                     type="number"
-                    min="0.01"
                     step="0.01"
                     value={amount}
                     onChange={(e) => { setAmount(e.target.value); setError('') }}
                     placeholder="0.00"
                     className={inputCls}
                   />
+                  <p className="text-xs text-navy/40 mt-1.5">Negative to log a refund</p>
                 </div>
                 <div>
                   <label className={labelCls}>Date</label>

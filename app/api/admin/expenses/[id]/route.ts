@@ -8,13 +8,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
   const { description, amount, category, date, paid_from_account_id } = await req.json()
-  if (!description?.trim() || !amount || amount <= 0 || !date) {
+  // Negative amounts are allowed — that's how a refund is logged against a category.
+  const amt = Number(amount)
+  if (!description?.trim() || !Number.isFinite(amt) || amt === 0 || !date) {
     return NextResponse.json({ error: 'Invalid expense data' }, { status: 400 })
   }
   const db = createAdminClient()
   const { data, error } = await db.from('expenses').update({
     description: description.trim(),
-    amount,
+    amount: amt,
     category: category || 'Other',
     date,
     paid_from_account_id: paid_from_account_id || null,
