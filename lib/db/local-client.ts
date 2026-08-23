@@ -440,7 +440,8 @@ export class QueryBuilder {
       if (this._limit) sql += ` LIMIT ${this._limit}`
 
       if (this._isSingle || this._isMaybe) {
-        const row = db.prepare(sql + ' LIMIT 1').get(...whereParams) as Record<string, unknown> | null
+        // .limit(n) already appended its own LIMIT; a second one is a syntax error.
+        const row = db.prepare(this._limit ? sql : sql + ' LIMIT 1').get(...whereParams) as Record<string, unknown> | null
         if (this._isSingle && !row) return { data: null, error: { message: 'Row not found' } }
         const coerced = coerceRow(this._table, row)
         const withEmbeds = coerced ? this._resolveEmbeds([coerced]) : []
