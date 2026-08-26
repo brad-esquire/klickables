@@ -13,6 +13,7 @@ export default function Navbar() {
 
   const links = [
     { href: '/shop', label: 'Shop' },
+    { href: '/custom-clickers', label: 'Custom Clickers' },
     { href: '/fidget-clickers-anxiety-adhd', label: 'Why Clickers' },
     { href: '/about', label: 'About Us' },
   ]
