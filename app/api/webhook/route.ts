@@ -28,6 +28,16 @@ export async function POST(req: NextRequest) {
   const pi = event.data.object as Stripe.PaymentIntent
   const meta = pi.metadata
 
+  // This Stripe account also processes payments that have nothing to do with
+  // Klickables (consulting invoices, subscriptions). Those carry none of the
+  // checkout metadata, and trying to build an order from one fails the NOT NULL
+  // email/customer_name columns — which returned a 500 to Stripe on every such
+  // payment until Stripe disabled the endpoint, silently stopping real orders
+  // from being recorded at all. Acknowledge anything that isn't ours and move on.
+  if (!meta.cart0 && !meta.cartJson) {
+    return NextResponse.json({ received: true, ignored: 'not a Klickables checkout' })
+  }
+
   // Reconstruct cart from chunked metadata keys (cart0, cart1, …) with fallback to legacy cartJson
   let cartJson = ''
   for (let i = 0; meta[`cart${i}`]; i++) cartJson += meta[`cart${i}`]
