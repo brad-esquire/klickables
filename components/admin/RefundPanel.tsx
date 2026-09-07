@@ -3,14 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
+import { AlertTriangle } from 'lucide-react'
 
 interface RefundPanelProps {
   orderId: string
   maxAmount: number
   alreadyRefunded: number
+  /** Payment belongs to the previous Stripe account — refundable only in that dashboard. */
+  legacyAccount?: boolean
+  paymentIntentId?: string | null
 }
 
-export default function RefundPanel({ orderId, maxAmount, alreadyRefunded }: RefundPanelProps) {
+export default function RefundPanel({ orderId, maxAmount, alreadyRefunded, legacyAccount, paymentIntentId }: RefundPanelProps) {
   const router = useRouter()
   const remaining = maxAmount - alreadyRefunded
   const [open, setOpen] = useState(false)
@@ -20,6 +24,44 @@ export default function RefundPanel({ orderId, maxAmount, alreadyRefunded }: Ref
   const [error, setError] = useState('')
 
   if (remaining <= 0) return null
+
+  // Refunds go through the account the current Stripe key belongs to, so a charge
+  // taken on the previous account can only be refunded there. Offer the payment
+  // id to look up rather than a button that is guaranteed to fail.
+  if (legacyAccount) {
+    return (
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-amber-200">
+        <div className="flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2">
+            <div>
+              <h2 className="font-black text-navy">Refund — manual only</h2>
+              {alreadyRefunded > 0 && (
+                <p className="text-sm text-navy/50">${alreadyRefunded.toFixed(2)} already refunded · ${remaining.toFixed(2)} remaining</p>
+              )}
+            </div>
+            <p className="text-sm text-navy/70 leading-relaxed">
+              This payment was processed on the previous Stripe account, so it can&rsquo;t be refunded from here.
+              Issue the refund in that account&rsquo;s Stripe dashboard, then record it on this order manually.
+            </p>
+            {paymentIntentId && (
+              <p className="text-xs text-navy/50">
+                Payment: <span className="font-mono text-navy/70">{paymentIntentId}</span>
+              </p>
+            )}
+            <a
+              href={`https://dashboard.stripe.com/payments/${paymentIntentId ?? ''}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-purple font-bold text-xs hover:text-pink transition-colors"
+            >
+              Open in Stripe dashboard &rarr;
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   async function handleRefund() {
     setError('')

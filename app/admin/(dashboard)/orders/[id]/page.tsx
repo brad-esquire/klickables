@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase'
+import { isLegacyStripePayment } from '@/lib/stripe'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import FulfillButton from '@/components/admin/FulfillButton'
@@ -50,6 +51,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   )
   const totalRefunded = events.filter((e) => e.type === 'refund_issued').reduce((s, e) => s + e.amount, 0)
   const canRefund = (order.status === 'paid' || order.status === 'fulfilled') && !!order.stripe_payment_intent_id
+  const legacyStripeAccount = isLegacyStripePayment(order.stripe_payment_intent_id)
 
   return (
     <div className="max-w-4xl">
@@ -306,6 +308,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             orderId={order.id}
             maxAmount={order.total}
             alreadyRefunded={totalRefunded}
+            legacyAccount={legacyStripeAccount}
+            paymentIntentId={order.stripe_payment_intent_id}
           />
         )}
 
