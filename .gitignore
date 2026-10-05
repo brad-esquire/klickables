@@ -44,3 +44,10 @@ next-env.d.ts
 local.db
 local.db-shm
 local.db-wal
+# Any database, and dated backups of one. Named files alone miss both a
+# renamed database and `local.db.bak-...`.
+*.db
+*.db-shm
+*.db-wal
+*.db.bak*
+*.db.backup*
