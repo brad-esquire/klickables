@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import { useState, useEffect } from 'react'
 import { Trash2, Truck, MapPin } from 'lucide-react'
 import { trackViewCart } from '@/lib/analytics'
+import PaymentBadges from '@/components/cart/PaymentBadges'
 
 export default function CartPage() {
   const { items, removeAt, updateQtyAt } = useCartStore()
@@ -267,6 +268,10 @@ export default function CartPage() {
           <p className="text-xs text-navy/50 text-center mt-3">
             Handmade &amp; 3D printed by Kirra, Lorelei, Isla &amp; Ashley · Secure checkout with Stripe
           </p>
+          <div className="mt-4 border-t pt-4">
+            <p className="text-xs text-navy/50 text-center mb-2">We accept cards and</p>
+            <PaymentBadges />
+          </div>
         </div>
       </div>
     </div>
