@@ -10,6 +10,11 @@ export async function getShippingSettings(): Promise<{ threshold: number; cost: 
   return { threshold, cost }
 }
 
+/** "$50" for whole dollars, "$49.99" otherwise — for marketing copy. */
+export function formatThreshold(threshold: number): string {
+  return Number.isInteger(threshold) ? `$${threshold}` : `$${threshold.toFixed(2)}`
+}
+
 export async function getShippingCost(subtotal: number): Promise<number> {
   const { threshold, cost } = await getShippingSettings()
   return subtotal >= threshold ? 0 : cost

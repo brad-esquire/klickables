@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import ProductCard from '@/components/shop/ProductCard'
 import JsonLd from '@/components/seo/JsonLd'
 import type { Product, ProductVariant } from '@/types'
+import { getShippingSettings, formatThreshold } from '@/lib/shipping'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
@@ -33,11 +34,14 @@ async function getProducts(): Promise<Product[]> {
   return products
 }
 
-export const metadata: Metadata = {
-  title: 'Shop Fidget Clickers',
-  description:
-    'Shop our handcrafted 3D printed fidget clickers — colorful, satisfying, and made by hand. Free shipping on orders over $50.',
-  alternates: { canonical: '/shop' },
+export async function generateMetadata(): Promise<Metadata> {
+  const { threshold } = await getShippingSettings()
+  return {
+    title: 'Shop Fidget Clickers',
+    description:
+      `Shop our handcrafted 3D printed fidget clickers — colorful, satisfying, and made by hand. Free shipping on orders over ${formatThreshold(threshold)}.`,
+    alternates: { canonical: '/shop' },
+  }
 }
 
 const breadcrumbLd = {

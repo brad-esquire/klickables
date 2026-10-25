@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import ProductCard from '@/components/shop/ProductCard'
 import Button from '@/components/ui/Button'
 import type { Product, ProductVariant } from '@/types'
+import { getShippingSettings, formatThreshold } from '@/lib/shipping'
 
 export const metadata: Metadata = {
   title: { absolute: 'Klickables — 3D Printed Fidget Clickers' },
@@ -31,7 +32,7 @@ async function getFeaturedProducts(): Promise<Product[]> {
 }
 
 export default async function HomePage() {
-  const featured = await getFeaturedProducts()
+  const [featured, { threshold }] = await Promise.all([getFeaturedProducts(), getShippingSettings()])
 
   return (
     <>
@@ -118,7 +119,7 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 text-center">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🚚</span>
-            <span className="font-bold text-navy">Free shipping on orders over $50</span>
+            <span className="font-bold text-navy">Free shipping on orders over {formatThreshold(threshold)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎨</span>
