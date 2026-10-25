@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getShippingCost } from '@/lib/shipping'
+import { getShippingSettings } from '@/lib/shipping'
 
 export async function GET(req: NextRequest) {
   const subtotal = parseFloat(req.nextUrl.searchParams.get('subtotal') ?? '0')
-  const cost = await getShippingCost(subtotal)
-  return NextResponse.json({ cost })
+  const { threshold, cost: flatRate } = await getShippingSettings()
+  const cost = subtotal >= threshold ? 0 : flatRate
+  return NextResponse.json({ cost, threshold, flatRate })
 }

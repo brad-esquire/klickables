@@ -68,7 +68,9 @@ export default function CheckoutForm() {
   const searchParams = useSearchParams()
   const discountCode = searchParams.get('discount') ?? ''
 
-  const [fulfillmentType, setFulfillmentType] = useState<'shipping' | 'pickup'>('shipping')
+  const [fulfillmentType, setFulfillmentType] = useState<'shipping' | 'pickup'>(
+    searchParams.get('fulfillment') === 'pickup' ? 'pickup' : 'shipping'
+  )
   const [pickupLocations, setPickupLocations] = useState<string[]>([])
   const [pickupLocation, setPickupLocation] = useState('')
 
@@ -94,6 +96,16 @@ export default function CheckoutForm() {
       .then((r) => r.json())
       .then((d) => setShipping(d.cost))
   }, [subtotal, fulfillmentType])
+
+  // Show the cart's discount in the summary right away — previously it only
+  // appeared after Continue to Payment returned from /api/checkout.
+  useEffect(() => {
+    if (!hydrated || !discountCode) return
+    fetch(`/api/validate-discount?code=${encodeURIComponent(discountCode)}&subtotal=${subtotal}`)
+      .then((r) => r.json())
+      .then((d) => setDiscount(d.error ? 0 : d.amount ?? 0))
+      .catch(() => setDiscount(0))
+  }, [hydrated, discountCode, subtotal])
 
   // Fire begin_checkout once hydrated, when the user actually has a cart to check out with.
   useEffect(() => {
@@ -167,7 +179,7 @@ export default function CheckoutForm() {
           ))}
           <div className="border-t pt-2 space-y-1">
             <div className="flex justify-between"><span className="text-navy/70">Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-            {discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>−${discount.toFixed(2)}</span></div>}
+            {discount > 0 && <div className="flex justify-between text-green-600"><span>Discount{discountCode ? ` (${discountCode.toUpperCase()})` : ''}</span><span>−${discount.toFixed(2)}</span></div>}
             {fulfillmentType === 'shipping' && (
               <div className="flex justify-between"><span className="text-navy/70">Shipping</span><span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span></div>
             )}
@@ -207,7 +219,7 @@ export default function CheckoutForm() {
                     fulfillmentType === 'pickup' ? 'border-purple text-purple bg-purple/5' : 'border-gray-200 text-navy/60 hover:border-gray-300'
                   }`}
                 >
-                  <MapPin size={16} /> Pick up
+                  <MapPin size={16} /> Pick up (free)
                 </button>
               </div>
             </div>

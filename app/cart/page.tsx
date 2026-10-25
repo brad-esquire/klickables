@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useCartStore, useCartHydrated } from '@/store/cartStore'
 import Button from '@/components/ui/Button'
 import { useState, useEffect } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Truck, MapPin } from 'lucide-react'
 import { trackViewCart } from '@/lib/analytics'
 
 export default function CartPage() {
@@ -18,13 +18,26 @@ export default function CartPage() {
   const [discountError, setDiscountError] = useState('')
   const [checkingCode, setCheckingCode] = useState(false)
   const [shipping, setShipping] = useState<number | null>(null)
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | null>(null)
+  const [fulfillmentType, setFulfillmentType] = useState<'shipping' | 'pickup'>('shipping')
+  const [pickupLocations, setPickupLocations] = useState<string[]>([])
 
   useEffect(() => {
     fetch(`/api/shipping-cost?subtotal=${subtotal}`)
       .then((r) => r.json())
-      .then((d) => setShipping(d.cost))
+      .then((d) => {
+        setShipping(d.cost)
+        setFreeShippingThreshold(d.threshold ?? null)
+      })
       .catch(() => setShipping(null))
   }, [subtotal])
+
+  useEffect(() => {
+    fetch('/api/pickup-locations')
+      .then((r) => r.json())
+      .then((d) => setPickupLocations(d.locations ?? []))
+      .catch(() => setPickupLocations([]))
+  }, [])
 
   // Fire view_cart once after hydration when the cart has items.
   useEffect(() => {
@@ -48,13 +61,13 @@ export default function CartPage() {
     setCheckingCode(true)
     setDiscountError('')
     try {
-      const res = await fetch(`/api/validate-discount?code=${discountCode}&subtotal=${subtotal}`)
+      const res = await fetch(`/api/validate-discount?code=${encodeURIComponent(discountCode.trim())}&subtotal=${subtotal}`)
       const data = await res.json()
       if (data.error) {
         setDiscountError(data.error)
         setDiscount(null)
       } else {
-        setDiscount({ code: discountCode.toUpperCase(), amount: data.amount, label: data.label })
+        setDiscount({ code: discountCode.trim().toUpperCase(), amount: data.amount, label: data.label })
       }
     } finally {
       setCheckingCode(false)
@@ -62,7 +75,14 @@ export default function CartPage() {
   }
 
   const discountedSubtotal = subtotal - (discount?.amount ?? 0)
-  const total = discountedSubtotal + (shipping ?? 0)
+  const shippingCharge = fulfillmentType === 'pickup' ? 0 : (shipping ?? 0)
+  const total = discountedSubtotal + shippingCharge
+  const amountToFreeShipping = freeShippingThreshold !== null ? Math.max(0, freeShippingThreshold - subtotal) : null
+
+  const checkoutParams = new URLSearchParams()
+  if (discount) checkoutParams.set('discount', discount.code)
+  if (fulfillmentType === 'pickup') checkoutParams.set('fulfillment', 'pickup')
+  const checkoutQuery = checkoutParams.toString()
 
   if (!hydrated) return null
 
@@ -122,6 +142,78 @@ export default function CartPage() {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-fit sticky top-24">
           <h2 className="font-black text-navy text-lg mb-5">Order Summary</h2>
 
+          {/* Delivery choice — shown up front so the shipping line isn't a surprise */}
+          <div className="mb-5">
+            <p className="text-sm font-bold text-navy mb-2">How do you want it?</p>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setFulfillmentType('shipping')}
+                className={`w-full flex items-start gap-3 border-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                  fulfillmentType === 'shipping' ? 'border-purple bg-purple/5' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <Truck size={18} className="text-purple mt-0.5 flex-shrink-0" />
+                <span className="flex-1 text-sm">
+                  <span className="block font-semibold text-navy">Ship to me</span>
+                  <span className="block text-xs text-navy/60">
+                    {shipping === 0 ? 'Free shipping anywhere in the US' : 'Flat rate anywhere in the US'}
+                  </span>
+                </span>
+                <span className="text-sm font-semibold text-navy">
+                  {shipping === null ? '...' : shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                </span>
+              </button>
+              {pickupLocations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('pickup')}
+                  className={`w-full flex items-start gap-3 border-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                    fulfillmentType === 'pickup' ? 'border-purple bg-purple/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <MapPin size={18} className="text-purple mt-0.5 flex-shrink-0" />
+                  <span className="flex-1 text-sm">
+                    <span className="block font-semibold text-navy">Local pickup</span>
+                    <span className="block text-xs text-navy/60">South Orange County:</span>
+                    {/* Spans styled as list items — <ul> isn't valid inside a <button> */}
+                    <span className="block pl-4 text-xs text-navy/60">
+                      {pickupLocations.map((loc) => (
+                        <span key={loc} className="list-item list-disc">{loc}</span>
+                      ))}
+                    </span>
+                  </span>
+                  <span className="text-sm font-semibold text-green-600">FREE</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Free-shipping nudge */}
+          {fulfillmentType === 'shipping' && amountToFreeShipping !== null && freeShippingThreshold !== null && (
+            <div className="mb-5 rounded-xl bg-cream px-3 py-2.5">
+              {amountToFreeShipping > 0 ? (
+                <p className="text-xs text-navy">
+                  Add <span className="font-bold text-pink">${amountToFreeShipping.toFixed(2)}</span> more for{' '}
+                  <span className="font-bold">free shipping</span>
+                </p>
+              ) : (
+                <p className="text-xs font-semibold text-green-600">🎉 You&apos;ve unlocked free shipping!</p>
+              )}
+              <div className="mt-2 h-1.5 rounded-full bg-white overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-pink transition-all"
+                  style={{ width: `${Math.min(100, (subtotal / freeShippingThreshold) * 100)}%` }}
+                />
+              </div>
+              {amountToFreeShipping > 0 && (
+                <Link href="/shop" className="inline-block mt-2 text-xs font-semibold text-purple hover:underline">
+                  Keep shopping →
+                </Link>
+              )}
+            </div>
+          )}
+
           {/* Discount code */}
           <div className="mb-5">
             <div className="flex gap-2">
@@ -153,9 +245,11 @@ export default function CartPage() {
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-navy/70">Shipping</span>
+              <span className="text-navy/70">{fulfillmentType === 'pickup' ? 'Pickup' : 'Shipping'}</span>
               <span className="font-semibold">
-                {shipping === null ? '...' : shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                {fulfillmentType === 'pickup'
+                  ? 'FREE'
+                  : shipping === null ? '...' : shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
               </span>
             </div>
             <div className="flex justify-between border-t pt-2 text-base">
@@ -165,11 +259,14 @@ export default function CartPage() {
           </div>
 
           <Link
-            href={`/checkout${discount ? `?discount=${discount.code}` : ''}`}
+            href={`/checkout${checkoutQuery ? `?${checkoutQuery}` : ''}`}
             className="block"
           >
             <Button size="lg" className="w-full">Checkout</Button>
           </Link>
+          <p className="text-xs text-navy/50 text-center mt-3">
+            Handmade &amp; 3D printed by Kirra, Lorelei, Isla &amp; Ashley · Secure checkout with Stripe
+          </p>
         </div>
       </div>
     </div>

@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
     let discountId: string | null = null
     if (discountCode) {
       const { data: discount } = await db.from('discount_codes').select('*').eq('code', discountCode.toUpperCase()).single()
-      if (discount?.active && subtotal >= discount.min_order) {
+      const expired = discount?.expires_at && new Date(discount.expires_at) < new Date()
+      const usedUp = discount?.max_uses != null && discount.uses_count >= discount.max_uses
+      if (discount?.active && !expired && !usedUp && subtotal >= discount.min_order) {
         discountAmount = discount.type === 'percentage'
           ? Math.round(subtotal * (discount.value / 100) * 100) / 100
           : Math.min(discount.value, subtotal)
